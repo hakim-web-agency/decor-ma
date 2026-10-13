@@ -41,9 +41,9 @@ type Piece = {
   length: string;
   width: string;
   distribution: "first-right" | "first-left";
-  firstColorIndex: number;
-  secondColorIndex: number;
 };
+
+const widthOptions = Array.from({ length: 70 }, (_, index) => index + 1);
 
 const copy = {
   ar: {
@@ -353,14 +353,14 @@ export default function HomePage() {
   const lightboxRef = useRef<HTMLDialogElement>(null);
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const [twoFace, setTwoFace] = useState(false);
+  const [firstColorIndex, setFirstColorIndex] = useState(0);
+  const [secondColorIndex, setSecondColorIndex] = useState(1);
   const [pieces, setPieces] = useState<Piece[]>([
     {
       id: 1,
       length: "0",
       width: "70",
       distribution: "first-right",
-      firstColorIndex: 0,
-      secondColorIndex: 1,
     },
   ]);
   const nextPieceId = useRef(2);
@@ -370,8 +370,6 @@ export default function HomePage() {
     src: fabric.src,
     number: fabric.number,
   }));
-  const widthOptions = Array.from({ length: 211 }, (_, index) => 70 + index);
-
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
@@ -435,6 +433,20 @@ export default function HomePage() {
     );
   };
 
+  const selectFirstColor = (colorIndex: number) => {
+    if (colorIndex === secondColorIndex) {
+      setSecondColorIndex(firstColorIndex);
+    }
+    setFirstColorIndex(colorIndex);
+  };
+
+  const selectSecondColor = (colorIndex: number) => {
+    if (colorIndex === firstColorIndex) {
+      setFirstColorIndex(secondColorIndex);
+    }
+    setSecondColorIndex(colorIndex);
+  };
+
   const addPiece = () => {
     const id = nextPieceId.current++;
     setPieces((current) => [
@@ -444,8 +456,6 @@ export default function HomePage() {
         length: "0",
         width: "70",
         distribution: "first-right",
-        firstColorIndex: (id - 1) % fabrics.length,
-        secondColorIndex: id % fabrics.length,
       },
     ]);
   };
@@ -459,8 +469,8 @@ export default function HomePage() {
   const quoteLines = pieces
     .map((piece, index) => {
       const imageDetails = twoFace
-        ? `اللون الأول: ${fabrics[piece.firstColorIndex].label} - الصورة رقم ${colors[piece.firstColorIndex].number}\nاللون الثاني: ${fabrics[piece.secondColorIndex].label} - الصورة رقم ${colors[piece.secondColorIndex].number}`
-        : `اللون المختار: ${fabrics[piece.firstColorIndex].label} - الصورة رقم ${colors[piece.firstColorIndex].number}`;
+        ? `اللون الأول: ${fabrics[firstColorIndex].label} - الصورة رقم ${colors[firstColorIndex].number}\nاللون الثاني: ${fabrics[secondColorIndex].label} - الصورة رقم ${colors[secondColorIndex].number}`
+        : `اللون المختار: ${fabrics[firstColorIndex].label} - الصورة رقم ${colors[firstColorIndex].number}`;
 
       return `${t.piece} ${index + 1}:\n${t.length}: ${pieceMeters(piece.length).toFixed(2)} m\n${t.width}: ${piece.width} ${t.centimeters}\n${imageDetails}`;
     })
@@ -790,12 +800,12 @@ export default function HomePage() {
                             <button
                               type="button"
                               key={color.name}
-                              className={`color-choice${piece.firstColorIndex === colorIndex ? " chosen" : ""}`}
+                              className={`color-choice${firstColorIndex === colorIndex ? " chosen" : ""}`}
                               style={{ "--swatch-image": `url("${color.src}")` } as React.CSSProperties}
                               aria-label={`${color.name}, الصورة رقم ${color.number}`}
-                              aria-pressed={piece.firstColorIndex === colorIndex}
+                              aria-pressed={firstColorIndex === colorIndex}
                               title={`${color.name} · الصورة رقم ${color.number}`}
-                              onClick={() => updatePiece(piece.id, { firstColorIndex: colorIndex })}
+                              onClick={() => selectFirstColor(colorIndex)}
                             >
                               <span className="color-choice-number" aria-hidden="true">
                                 {color.number}
@@ -803,7 +813,7 @@ export default function HomePage() {
                             </button>
                           ))}
                           <span className="selected-color-name">
-                            {colors[piece.firstColorIndex].name} · الصورة رقم {colors[piece.firstColorIndex].number}
+                            {colors[firstColorIndex].name} · الصورة رقم {colors[firstColorIndex].number}
                           </span>
                         </div>
                       ) : (
@@ -815,22 +825,12 @@ export default function HomePage() {
                                 <button
                                   type="button"
                                   key={color.name}
-                                  className={`color-choice${piece.firstColorIndex === colorIndex ? " chosen" : ""}`}
+                                  className={`color-choice${firstColorIndex === colorIndex ? " chosen" : ""}`}
                                   style={{ "--swatch-image": `url("${color.src}")` } as React.CSSProperties}
                                   aria-label={`${t.firstColor}: ${color.name}, الصورة رقم ${color.number}`}
-                                  aria-pressed={piece.firstColorIndex === colorIndex}
+                                  aria-pressed={firstColorIndex === colorIndex}
                                   title={`${color.name} · الصورة رقم ${color.number}`}
-                                  onClick={() =>
-                                    updatePiece(
-                                      piece.id,
-                                      colorIndex === piece.secondColorIndex
-                                        ? {
-                                            firstColorIndex: colorIndex,
-                                            secondColorIndex: piece.firstColorIndex,
-                                          }
-                                        : { firstColorIndex: colorIndex },
-                                    )
-                                  }
+                                  onClick={() => selectFirstColor(colorIndex)}
                                 >
                                   <span className="color-choice-number" aria-hidden="true">
                                     {color.number}
@@ -838,7 +838,7 @@ export default function HomePage() {
                                 </button>
                               ))}
                               <span className="selected-color-name">
-                                {colors[piece.firstColorIndex].name} · الصورة رقم {colors[piece.firstColorIndex].number}
+                                {colors[firstColorIndex].name} · الصورة رقم {colors[firstColorIndex].number}
                               </span>
                             </div>
                           </div>
@@ -849,22 +849,12 @@ export default function HomePage() {
                                 <button
                                   type="button"
                                   key={color.name}
-                                  className={`color-choice${piece.secondColorIndex === colorIndex ? " chosen" : ""}`}
+                                  className={`color-choice${secondColorIndex === colorIndex ? " chosen" : ""}`}
                                   style={{ "--swatch-image": `url("${color.src}")` } as React.CSSProperties}
                                   aria-label={`${t.secondColor}: ${color.name}, الصورة رقم ${color.number}`}
-                                  aria-pressed={piece.secondColorIndex === colorIndex}
+                                  aria-pressed={secondColorIndex === colorIndex}
                                   title={`${color.name} · الصورة رقم ${color.number}`}
-                                  onClick={() =>
-                                    updatePiece(
-                                      piece.id,
-                                      colorIndex === piece.firstColorIndex
-                                        ? {
-                                            secondColorIndex: colorIndex,
-                                            firstColorIndex: piece.secondColorIndex,
-                                          }
-                                        : { secondColorIndex: colorIndex },
-                                    )
-                                  }
+                                  onClick={() => selectSecondColor(colorIndex)}
                                 >
                                   <span className="color-choice-number" aria-hidden="true">
                                     {color.number}
@@ -872,7 +862,7 @@ export default function HomePage() {
                                 </button>
                               ))}
                               <span className="selected-color-name">
-                                {colors[piece.secondColorIndex].name} · الصورة رقم {colors[piece.secondColorIndex].number}
+                                {colors[secondColorIndex].name} · الصورة رقم {colors[secondColorIndex].number}
                               </span>
                             </div>
                           </div>
@@ -933,10 +923,10 @@ export default function HomePage() {
                             }}
                           >
                             <option value="first-right">
-                              {colors[piece.firstColorIndex].name} {t.right}
+                              {colors[firstColorIndex].name} {t.right}
                             </option>
                             <option value="first-left">
-                              {colors[piece.firstColorIndex].name} {t.left}
+                              {colors[firstColorIndex].name} {t.left}
                             </option>
                           </select>
                         </label>
@@ -945,8 +935,8 @@ export default function HomePage() {
                     {twoFace && (
                       <p className="piece-color-summary">
                         {piece.distribution === "first-right"
-                          ? `${colors[piece.firstColorIndex].name} ${t.right} · ${colors[piece.secondColorIndex].name} ${t.left}`
-                          : `${colors[piece.firstColorIndex].name} ${t.left} · ${colors[piece.secondColorIndex].name} ${t.right}`}
+                          ? `${colors[firstColorIndex].name} ${t.right} · ${colors[secondColorIndex].name} ${t.left}`
+                          : `${colors[firstColorIndex].name} ${t.left} · ${colors[secondColorIndex].name} ${t.right}`}
                       </p>
                     )}
                   </div>
