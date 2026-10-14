@@ -810,14 +810,14 @@ a {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 9px;
 }
 
 .color-choice {
   position: relative;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
   border: 1px solid rgba(36, 35, 31, 0.15);
   border-radius: 4px;
   background-color: #e7e2d8;
@@ -848,7 +848,8 @@ a {
 }
 
 .selected-color-name {
-  margin-inline-start: 5px;
+  width: 100%;
+  margin-inline-start: 0;
   color: var(--muted);
   font-size: 10px;
 }
@@ -1433,7 +1434,7 @@ a {
   }
 
   .color-options {
-    gap: 7px;
+    gap: 8px;
   }
 
   .contact-inner {

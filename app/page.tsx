@@ -19,8 +19,8 @@ const fabrics = Array.from({ length: 12 }, (_, index) => ({
     "قماش فاخر",
     "نسيج مميز",
   ][index],
-  src: `/images/image-${index + 1}.jpg`,
-})).slice(1).map((fabric, index) => ({ ...fabric, number: index + 1 }));
+  src: `/image${index + 1}.jpg`,
+}));
 
 const heroSlides = Array.from({ length: 3 }, (_, index) => ({
   src: `/home payg ${index + 1}.jpg`,
@@ -160,7 +160,7 @@ const copy = {
       "Laine raffinée", "Velours de luxe", "Tissage classique", "Touche soyeuse",
       "Tissu jacquard", "Tissage doux", "Finition élégante", "Tissu résistant",
       "Tissage marocain", "Velours doux", "Tissu premium", "Tissage unique",
-    ].slice(1),
+    ],
     fabricAlt: "Choisir le tissu",
     closePreview: "Fermer l’aperçu de l’image",
     projectsEyebrow: "Inspiration déco",
@@ -247,7 +247,7 @@ const copy = {
       "Fine wool", "Luxury velvet", "Classic weave", "Silky touch",
       "Jacquard fabric", "Soft weave", "Elegant finish", "Durable fabric",
       "Moroccan weave", "Soft velvet", "Premium fabric", "Signature weave",
-    ].slice(1),
+    ],
     fabricAlt: "Select fabric",
     closePreview: "Close image preview",
     projectsEyebrow: "Interior inspiration",
@@ -469,8 +469,8 @@ export default function HomePage() {
   const quoteLines = pieces
     .map((piece, index) => {
       const imageDetails = twoFace
-        ? `اللون الأول: ${fabrics[firstColorIndex].label} - الصورة رقم ${colors[firstColorIndex].number}\nاللون الثاني: ${fabrics[secondColorIndex].label} - الصورة رقم ${colors[secondColorIndex].number}`
-        : `اللون المختار: ${fabrics[firstColorIndex].label} - الصورة رقم ${colors[firstColorIndex].number}`;
+        ? `اللون الأول: ${colors[firstColorIndex].name} - الصورة رقم ${colors[firstColorIndex].number}\nاللون الثاني: ${colors[secondColorIndex].name} - الصورة رقم ${colors[secondColorIndex].number}`
+        : `اللون المختار: ${colors[firstColorIndex].name} - الصورة رقم ${colors[firstColorIndex].number}`;
 
       return `${t.piece} ${index + 1}:\n${t.length}: ${pieceMeters(piece.length).toFixed(2)} m\n${t.width}: ${piece.width} ${t.centimeters}\n${imageDetails}`;
     })
@@ -792,83 +792,85 @@ export default function HomePage() {
                         </button>
                       )}
                     </div>
-                    <fieldset className="color-fieldset piece-color-fieldset">
-                      <legend>{twoFace ? t.doubleColorLegend : t.singleColorLegend}</legend>
-                      {!twoFace ? (
-                        <div className="color-options">
-                          {colors.map((color, colorIndex) => (
-                            <button
-                              type="button"
-                              key={color.name}
-                              className={`color-choice${firstColorIndex === colorIndex ? " chosen" : ""}`}
-                              style={{ "--swatch-image": `url("${color.src}")` } as React.CSSProperties}
-                              aria-label={`${color.name}, الصورة رقم ${color.number}`}
-                              aria-pressed={firstColorIndex === colorIndex}
-                              title={`${color.name} · الصورة رقم ${color.number}`}
-                              onClick={() => selectFirstColor(colorIndex)}
-                            >
-                              <span className="color-choice-number" aria-hidden="true">
-                                {color.number}
-                              </span>
-                            </button>
-                          ))}
-                          <span className="selected-color-name">
-                            {colors[firstColorIndex].name} · الصورة رقم {colors[firstColorIndex].number}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="two-color-pickers">
-                          <div className="face-picker">
-                            <span>{t.firstColor}</span>
-                            <div className="color-options">
-                              {colors.map((color, colorIndex) => (
-                                <button
-                                  type="button"
-                                  key={color.name}
-                                  className={`color-choice${firstColorIndex === colorIndex ? " chosen" : ""}`}
-                                  style={{ "--swatch-image": `url("${color.src}")` } as React.CSSProperties}
-                                  aria-label={`${t.firstColor}: ${color.name}, الصورة رقم ${color.number}`}
-                                  aria-pressed={firstColorIndex === colorIndex}
-                                  title={`${color.name} · الصورة رقم ${color.number}`}
-                                  onClick={() => selectFirstColor(colorIndex)}
-                                >
-                                  <span className="color-choice-number" aria-hidden="true">
-                                    {color.number}
-                                  </span>
-                                </button>
-                              ))}
-                              <span className="selected-color-name">
-                                {colors[firstColorIndex].name} · الصورة رقم {colors[firstColorIndex].number}
-                              </span>
+                    {index === 0 && (
+                      <fieldset className="color-fieldset piece-color-fieldset">
+                        <legend>{twoFace ? t.doubleColorLegend : t.singleColorLegend}</legend>
+                        {!twoFace ? (
+                          <div className="color-options">
+                            {colors.map((color, colorIndex) => (
+                              <button
+                                type="button"
+                                key={color.name}
+                                className={`color-choice${firstColorIndex === colorIndex ? " chosen" : ""}`}
+                                style={{ "--swatch-image": `url("${color.src}")` } as React.CSSProperties}
+                                aria-label={`${color.name}, الصورة رقم ${color.number}`}
+                                aria-pressed={firstColorIndex === colorIndex}
+                                title={`${color.name} · الصورة رقم ${color.number}`}
+                                onClick={() => selectFirstColor(colorIndex)}
+                              >
+                                <span className="color-choice-number" aria-hidden="true">
+                                  {color.number}
+                                </span>
+                              </button>
+                            ))}
+                            <span className="selected-color-name">
+                              {colors[firstColorIndex].name} · الصورة رقم {colors[firstColorIndex].number}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="two-color-pickers">
+                            <div className="face-picker">
+                              <span>{t.firstColor}</span>
+                              <div className="color-options">
+                                {colors.map((color, colorIndex) => (
+                                  <button
+                                    type="button"
+                                    key={color.name}
+                                    className={`color-choice${firstColorIndex === colorIndex ? " chosen" : ""}`}
+                                    style={{ "--swatch-image": `url("${color.src}")` } as React.CSSProperties}
+                                    aria-label={`${t.firstColor}: ${color.name}, الصورة رقم ${color.number}`}
+                                    aria-pressed={firstColorIndex === colorIndex}
+                                    title={`${color.name} · الصورة رقم ${color.number}`}
+                                    onClick={() => selectFirstColor(colorIndex)}
+                                  >
+                                    <span className="color-choice-number" aria-hidden="true">
+                                      {color.number}
+                                    </span>
+                                  </button>
+                                ))}
+                                <span className="selected-color-name">
+                                  {colors[firstColorIndex].name} · الصورة رقم {colors[firstColorIndex].number}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="face-picker">
+                              <span>{t.secondColor}</span>
+                              <div className="color-options">
+                                {colors.map((color, colorIndex) => (
+                                  <button
+                                    type="button"
+                                    key={color.name}
+                                    className={`color-choice${secondColorIndex === colorIndex ? " chosen" : ""}`}
+                                    style={{ "--swatch-image": `url("${color.src}")` } as React.CSSProperties}
+                                    aria-label={`${t.secondColor}: ${color.name}, الصورة رقم ${color.number}`}
+                                    aria-pressed={secondColorIndex === colorIndex}
+                                    title={`${color.name} · الصورة رقم ${color.number}`}
+                                    onClick={() => selectSecondColor(colorIndex)}
+                                  >
+                                    <span className="color-choice-number" aria-hidden="true">
+                                      {color.number}
+                                    </span>
+                                  </button>
+                                ))}
+                                <span className="selected-color-name">
+                                  {colors[secondColorIndex].name} · الصورة رقم {colors[secondColorIndex].number}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                          <div className="face-picker">
-                            <span>{t.secondColor}</span>
-                            <div className="color-options">
-                              {colors.map((color, colorIndex) => (
-                                <button
-                                  type="button"
-                                  key={color.name}
-                                  className={`color-choice${secondColorIndex === colorIndex ? " chosen" : ""}`}
-                                  style={{ "--swatch-image": `url("${color.src}")` } as React.CSSProperties}
-                                  aria-label={`${t.secondColor}: ${color.name}, الصورة رقم ${color.number}`}
-                                  aria-pressed={secondColorIndex === colorIndex}
-                                  title={`${color.name} · الصورة رقم ${color.number}`}
-                                  onClick={() => selectSecondColor(colorIndex)}
-                                >
-                                  <span className="color-choice-number" aria-hidden="true">
-                                    {color.number}
-                                  </span>
-                                </button>
-                              ))}
-                              <span className="selected-color-name">
-                                {colors[secondColorIndex].name} · الصورة رقم {colors[secondColorIndex].number}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </fieldset>
+                        )}
+                      </fieldset>
+                    )}
                     <div className="piece-fields">
                       <label>
                         <span>{t.length}</span>
@@ -907,7 +909,7 @@ export default function HomePage() {
                           ))}
                         </select>
                       </label>
-                      {twoFace && (
+                      {twoFace && index === 0 && (
                         <label className="distribution-select">
                           <span>{t.distribution}</span>
                           <select
@@ -932,7 +934,7 @@ export default function HomePage() {
                         </label>
                       )}
                     </div>
-                    {twoFace && (
+                    {twoFace && index === 0 && (
                       <p className="piece-color-summary">
                         {piece.distribution === "first-right"
                           ? `${colors[firstColorIndex].name} ${t.right} · ${colors[secondColorIndex].name} ${t.left}`
