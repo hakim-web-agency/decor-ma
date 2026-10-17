@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import {
   FiActivity,
-  FiArrowLeft,
   FiArrowRight,
   FiArrowUpRight,
   FiBell,
@@ -17,6 +16,7 @@ import {
   FiGrid,
   FiHome,
   FiLayers,
+  FiLogOut,
   FiMail,
   FiMenu,
   FiMoreHorizontal,
@@ -58,98 +58,169 @@ type FabricRequest = {
   tone: string;
 };
 
-const initialOrders: Order[] = [
-  { id: "DM-1048", customer: "Salma Benali", initials: "SB", email: "salma.benali@email.com", item: "Salon set · 7 pieces", date: "Oct 14, 2026", amount: 4850, status: "Pending", tone: "rose" },
-  { id: "DM-1047", customer: "Youssef Amrani", initials: "YA", email: "y.amrani@email.com", item: "Custom curtains", date: "Oct 14, 2026", amount: 2150, status: "Completed", tone: "blue" },
-  { id: "DM-1046", customer: "Lina El Fassi", initials: "LE", email: "lina.elfassi@email.com", item: "Cushion covers · 12 pcs", date: "Oct 13, 2026", amount: 1680, status: "Pending", tone: "green" },
-  { id: "DM-1045", customer: "Omar Tazi", initials: "OT", email: "omar.tazi@email.com", item: "Salon set · 5 pieces", date: "Oct 12, 2026", amount: 3720, status: "Completed", tone: "gold" },
-  { id: "DM-1044", customer: "Meryem Idrissi", initials: "MI", email: "meryem.idrissi@email.com", item: "Custom curtains · 2", date: "Oct 11, 2026", amount: 2940, status: "Cancelled", tone: "purple" },
-  { id: "DM-1043", customer: "Adam Alaoui", initials: "AA", email: "adam.alaoui@email.com", item: "Cushion covers · 8 pcs", date: "Oct 10, 2026", amount: 1120, status: "Completed", tone: "blue" },
-  { id: "DM-1042", customer: "Nadia Chraibi", initials: "NC", email: "nadia.chraibi@email.com", item: "Salon set · 9 pieces", date: "Oct 09, 2026", amount: 6280, status: "Pending", tone: "rose" },
-  { id: "DM-1041", customer: "Karim Berrada", initials: "KB", email: "karim.berrada@email.com", item: "Custom curtains", date: "Oct 08, 2026", amount: 1860, status: "Completed", tone: "green" },
-  { id: "DM-1040", customer: "Imane Fassi", initials: "IF", email: "imane.fassi@email.com", item: "Salon set · 5 pieces", date: "Oct 07, 2026", amount: 3400, status: "Pending", tone: "gold" },
-  { id: "DM-1039", customer: "Hamza Lahlou", initials: "HL", email: "hamza.lahlou@email.com", item: "Cushion covers · 6 pcs", date: "Oct 06, 2026", amount: 960, status: "Completed", tone: "purple" },
-];
+type SalesPoint = {
+  label: string;
+  revenue: number;
+  orders: number;
+};
 
-const initialRequests: FabricRequest[] = [
-  { id: "FR-208", customer: "Salma Benali", initials: "SB", email: "salma.benali@email.com", item: "Moroccan salon · sdadir", dimensions: "7 pieces · 70 cm width", fabric: "Velvet · Olive", date: "Oct 14, 2026", amount: 4850, status: "Pending", tone: "rose" },
-  { id: "FR-207", customer: "Lina El Fassi", initials: "LE", email: "lina.elfassi@email.com", item: "Cushion covers", dimensions: "12 pieces · 45 × 45 cm", fabric: "Jacquard · Sand", date: "Oct 13, 2026", amount: 1680, status: "Pending", tone: "green" },
-  { id: "FR-206", customer: "Nadia Chraibi", initials: "NC", email: "nadia.chraibi@email.com", item: "Moroccan salon · sdadir", dimensions: "9 pieces · 70 cm width", fabric: "Classic weave · Terracotta", date: "Oct 12, 2026", amount: 6280, status: "Pending", tone: "rose" },
-  { id: "FR-205", customer: "Omar Tazi", initials: "OT", email: "omar.tazi@email.com", item: "Living room curtains", dimensions: "2 panels · 240 × 180 cm", fabric: "Linen · Natural", date: "Oct 11, 2026", amount: 2940, status: "Completed", tone: "gold" },
-  { id: "FR-204", customer: "Youssef Amrani", initials: "YA", email: "y.amrani@email.com", item: "Cushion covers", dimensions: "8 pieces · 50 × 50 cm", fabric: "Velvet · Midnight", date: "Oct 10, 2026", amount: 1120, status: "Completed", tone: "blue" },
-];
+type SalesRange = "12-months" | "30-days";
 
-const navItems: { label: Section; icon: typeof FiGrid }[] = [
-  { label: "Overview", icon: FiGrid },
-  { label: "Orders", icon: FiPackage },
-  { label: "Fabric requests", icon: FiLayers },
+const sectionNames: Record<Section, string> = {
+  Overview: "لوحة المعلومات",
+  Orders: "الطلبات",
+  "Fabric requests": "طلبات الأقمشة",
+  Settings: "الإعدادات",
+};
+
+const navItems: { label: Section; title: string; icon: typeof FiGrid }[] = [
+  { label: "Overview", title: sectionNames.Overview, icon: FiGrid },
+  { label: "Orders", title: sectionNames.Orders, icon: FiPackage },
+  { label: "Fabric requests", title: sectionNames["Fabric requests"], icon: FiLayers },
 ];
 
 const formatMoney = (amount: number) =>
-  `${new Intl.NumberFormat("en-MA", { maximumFractionDigits: 0 }).format(amount)} MAD`;
+  `${new Intl.NumberFormat("ar-MA", { maximumFractionDigits: 0 }).format(amount)} درهم`;
+
+const formatDate = (date: string) =>
+  new Intl.DateTimeFormat("ar-MA", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${date}T00:00:00`));
+
+const getNextOrderId = (orders: Order[]) => {
+  const highestId = orders.reduce((highest, order) => {
+    const match = /^DM-(\d+)$/.exec(order.id);
+    return match ? Math.max(highest, Number(match[1])) : highest;
+  }, 0);
+  return `DM-${String(highestId + 1).padStart(4, "0")}`;
+};
+
+function getSalesData(orders: Order[], range: SalesRange): SalesPoint[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const completedOrders = orders.filter((order) => order.status === "Completed");
+
+  if (range === "12-months") {
+    return Array.from({ length: 12 }, (_, index) => {
+      const monthDate = new Date(today.getFullYear(), today.getMonth() - 11 + index, 1);
+      const key = `${monthDate.getFullYear()}-${monthDate.getMonth()}`;
+      const monthOrders = completedOrders.filter((order) => {
+        const orderDate = new Date(`${order.date}T00:00:00`);
+        return `${orderDate.getFullYear()}-${orderDate.getMonth()}` === key;
+      });
+      return {
+        label: new Intl.DateTimeFormat("ar-MA", { month: "short" }).format(monthDate),
+        revenue: monthOrders.reduce((total, order) => total + order.amount, 0),
+        orders: monthOrders.length,
+      };
+    });
+  }
+
+  const firstDay = new Date(today);
+  firstDay.setDate(today.getDate() - 29);
+  return Array.from({ length: 10 }, (_, index) => {
+    const start = new Date(firstDay);
+    start.setDate(firstDay.getDate() + index * 3);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 2);
+    const endOfRange = new Date(end);
+    endOfRange.setHours(23, 59, 59, 999);
+    const rangeOrders = completedOrders.filter((order) => {
+      const orderDate = new Date(`${order.date}T00:00:00`);
+      return orderDate >= start && orderDate <= endOfRange;
+    });
+    const label = start.getMonth() === end.getMonth()
+      ? `${start.getDate()}–${end.getDate()}`
+      : `${start.getDate()} ${new Intl.DateTimeFormat("ar-MA", { month: "short" }).format(start)}–${end.getDate()} ${new Intl.DateTimeFormat("ar-MA", { month: "short" }).format(end)}`;
+    return {
+      label,
+      revenue: rangeOrders.reduce((total, order) => total + order.amount, 0),
+      orders: rangeOrders.length,
+    };
+  });
+}
 
 function StatusBadge({ status }: { status: Status }) {
-  return <span className={`status-badge status-${status.toLowerCase()}`}><span />{status}</span>;
+  const labels: Record<Status, string> = { Pending: "قيد الانتظار", Completed: "مكتمل", Cancelled: "ملغي" };
+  return <span className={`status-badge status-${status.toLowerCase()}`}><span />{labels[status]}</span>;
 }
 
 function Avatar({ initials, tone }: { initials: string; tone: string }) {
   return <span className={`avatar avatar-${tone}`}>{initials}</span>;
 }
 
-function TrendChart() {
-  const bars = [34, 48, 40, 62, 47, 56, 39, 72, 52, 65, 48, 82];
-  const line = "0,113 56,100 112,106 168,77 224,91 280,70 336,84 392,49 448,61 504,37 560,49 616,16";
+function TrendChart({ data, range }: { data: SalesPoint[]; range: SalesRange }) {
+  const maxRevenue = Math.max(0, ...data.map((point) => point.revenue));
+  const maxOrders = Math.max(0, ...data.map((point) => point.orders));
+  const hasSales = data.some((point) => point.orders > 0);
+  const line = data.map((point, index) => {
+    const x = data.length === 1 ? 308 : (index / (data.length - 1)) * 616;
+    const y = maxRevenue ? 130 - (point.revenue / maxRevenue) * 112 : 130;
+    return `${x},${y}`;
+  }).join(" ");
+  const firstPoint = line.split(" ")[0];
+  const lastPoint = line.split(" ").at(-1);
+  const area = `${firstPoint} ${line} ${lastPoint?.split(",")[0]},130`;
   return (
     <div className="chart-wrap">
       <div className="chart-legend">
-        <span><i className="legend-dot revenue-dot" />Revenue</span>
-        <span><i className="legend-dot orders-dot" />Orders</span>
+        <span><i className="legend-dot revenue-dot" />الإيرادات</span>
+        <span><i className="legend-dot orders-dot" />الطلبات</span>
       </div>
       <div className="chart">
-        <div className="chart-y-labels"><span>12k</span><span>9k</span><span>6k</span><span>3k</span><span>0</span></div>
+        <div className="chart-y-labels"><span>{formatCompactMoney(maxRevenue)}</span><span>{formatCompactMoney(maxRevenue * .75)}</span><span>{formatCompactMoney(maxRevenue * .5)}</span><span>{formatCompactMoney(maxRevenue * .25)}</span><span>0</span></div>
         <div className="chart-plot">
           <div className="chart-grid"><i /><i /><i /><i /><i /></div>
-          <div className="chart-bars">{bars.map((height, index) => <span key={index} style={{ height: `${height}%` }} />)}</div>
-          <svg className="chart-line" viewBox="0 0 616 130" preserveAspectRatio="none" role="img" aria-label="Revenue increased steadily over the last 12 months">
+          <div className="chart-bars">{data.map((point) => <span key={point.label} style={{ height: `${maxOrders ? (point.orders / maxOrders) * 78 : 0}%` }} />)}</div>
+          <svg className="chart-line" viewBox="0 0 616 130" preserveAspectRatio="none" role="img" aria-label={`الإيرادات والطلبات خلال ${range === "12-months" ? "الأشهر الاثني عشر الماضية" : "الثلاثين يوماً الماضية"}`}>
             <defs><linearGradient id="revenue-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#b28154" stopOpacity=".2" /><stop offset="100%" stopColor="#b28154" stopOpacity="0" /></linearGradient></defs>
-            <polygon points={`0,130 ${line} 616,130`} fill="url(#revenue-fill)" />
+            <polygon points={`0,130 ${area}`} fill="url(#revenue-fill)" />
             <polyline points={line} fill="none" stroke="#a87549" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-            <circle cx="616" cy="16" r="4" fill="#a87549" vectorEffect="non-scaling-stroke" />
+            <circle cx={lastPoint?.split(",")[0]} cy={lastPoint?.split(",")[1]} r="4" fill="#a87549" vectorEffect="non-scaling-stroke" />
           </svg>
-          <div className="chart-x-labels">{["May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr"].map((month) => <span key={month}>{month}</span>)}</div>
+          <div className="chart-x-labels">{data.map((point) => <span key={point.label}>{point.label}</span>)}</div>
+          {!hasSales && <span className="chart-empty-state">لا توجد مبيعات مكتملة خلال هذه الفترة</span>}
         </div>
       </div>
     </div>
   );
 }
 
+function formatCompactMoney(amount: number) {
+  return amount >= 1000
+    ? `${new Intl.NumberFormat("ar-MA", { maximumFractionDigits: 1 }).format(amount / 1000)} ألف`
+    : new Intl.NumberFormat("ar-MA", { maximumFractionDigits: 0 }).format(amount);
+}
+
 function OrdersTable({
   orders,
   onSelect,
+  onViewAll,
+  compactTotal,
   compact = false,
 }: {
   orders: Order[];
   onSelect: (order: Order) => void;
+  onViewAll?: () => void;
+  compactTotal?: number;
   compact?: boolean;
 }) {
   return (
     <div className="table-scroll">
       <table className="data-table">
-        <thead><tr><th>Order</th><th>Customer</th><th>Product</th><th>Date</th><th>Amount</th><th>Status</th><th /></tr></thead>
+        <thead><tr><th>رقم الطلب</th><th>العميل</th><th>المنتج</th><th>التاريخ</th><th>المبلغ</th><th>الحالة</th><th /></tr></thead>
         <tbody>
           {orders.map((order) => (
             <tr key={order.id}>
-              <td className="order-id">{order.id}</td>
+              <td className="order-id" dir="ltr">{order.id}</td>
               <td><div className="customer-cell"><Avatar initials={order.initials} tone={order.tone} /><div><strong>{order.customer}</strong><small>{order.email}</small></div></div></td>
-              <td>{order.item}</td><td className="muted-cell">{order.date}</td><td className="amount-cell">{formatMoney(order.amount)}</td>
+              <td>{order.item}</td><td className="muted-cell">{formatDate(order.date)}</td><td className="amount-cell">{formatMoney(order.amount)}</td>
               <td><StatusBadge status={order.status} /></td>
-              <td><button className="icon-button row-action" aria-label={`View order ${order.id}`} onClick={() => onSelect(order)}><FiMoreHorizontal /></button></td>
+              <td><button className="icon-button row-action" aria-label={`عرض الطلب ${order.id}`} onClick={() => onSelect(order)}><FiMoreHorizontal /></button></td>
             </tr>
           ))}
-          {!orders.length && <tr><td colSpan={7} className="empty-state">No orders match your search.</td></tr>}
+          {!orders.length && <tr><td colSpan={7} className="empty-state">لا توجد طلبات مطابقة للبحث.</td></tr>}
         </tbody>
       </table>
-      {compact && <div className="table-footer"><span>Showing {orders.length} of 248 orders</span><button className="text-link" type="button">View all orders <FiArrowRight /></button></div>}
+      {compact && <div className="table-footer"><span>عرض {orders.length} من أصل {compactTotal ?? orders.length} طلبات مطابقة</span><button className="text-link" type="button" onClick={onViewAll}>عرض جميع الطلبات <FiArrowRight /></button></div>}
     </div>
   );
 }
@@ -157,10 +228,13 @@ function OrdersTable({
 export default function DashboardPage() {
   const [section, setSection] = useState<Section>("Overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [orders, setOrders] = useState(initialOrders);
-  const [requests, setRequests] = useState(initialRequests);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [requests, setRequests] = useState<FabricRequest[]>([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"All" | Status>("All");
+  const [recentSearch, setRecentSearch] = useState("");
+  const [recentFilter, setRecentFilter] = useState<"All" | Status>("All");
+  const [salesRange, setSalesRange] = useState<SalesRange>("12-months");
   const [page, setPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<FabricRequest | null>(null);
@@ -169,11 +243,26 @@ export default function DashboardPage() {
   const [email, setEmail] = useState("bonjour@decor.ma");
   const [phone, setPhone] = useState("+212 679 299 620");
   const [instagram, setInstagram] = useState("@decor.ma");
+  const [logoutError, setLogoutError] = useState("");
 
   const filteredOrders = useMemo(() => orders.filter((order) => {
     const matchesSearch = `${order.id} ${order.customer} ${order.item}`.toLowerCase().includes(search.toLowerCase());
     return matchesSearch && (filter === "All" || order.status === filter);
   }), [orders, search, filter]);
+  const filteredRecentOrders = useMemo(() => orders.filter((order) => {
+    const matchesSearch = `${order.id} ${order.customer} ${order.email} ${order.item}`.toLowerCase().includes(recentSearch.trim().toLowerCase());
+    return matchesSearch && (recentFilter === "All" || order.status === recentFilter);
+  }), [orders, recentSearch, recentFilter]);
+  const chartData = useMemo(() => getSalesData(orders, salesRange), [orders, salesRange]);
+  const chartRevenue = chartData.reduce((total, point) => total + point.revenue, 0);
+  const completedRevenue = orders.reduce((total, order) => total + (order.status === "Completed" ? order.amount : 0), 0);
+  const activeCustomerRecords = Array.from(new Map(orders.filter((order) => order.customer).map((order) => [order.customer, order])).values());
+  const activeCustomers = activeCustomerRecords.length;
+  const pendingRequests = requests.filter((request) => request.status === "Pending").length;
+  const latestActivity = [
+    ...orders.map((order) => ({ id: order.id, customer: order.customer, initials: order.initials, tone: order.tone, action: "order" as const, detail: order.item, date: order.date })),
+    ...requests.map((request) => ({ id: request.id, customer: request.customer, initials: request.initials, tone: request.tone, action: "request" as const, detail: request.item, date: request.date })),
+  ].sort((left, right) => right.date.localeCompare(left.date)).slice(0, 4);
   const pageSize = 5;
   const pageCount = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
   const pagedOrders = filteredOrders.slice((page - 1) * pageSize, page * pageSize);
@@ -195,6 +284,36 @@ export default function DashboardPage() {
     setSelectedOrder((current) => current?.id === id ? { ...current, ...changes } : current);
   };
 
+  const exportReport = () => {
+    const headers = ["النوع", "المعرّف", "العميل", "البريد الإلكتروني", "المنتج", "التاريخ", "المبلغ (درهم)", "الحالة"];
+    const rows = [
+      ...orders.map((order) => ["طلب", order.id, order.customer, order.email, order.item, order.date, order.amount, order.status]),
+      ...requests.map((request) => ["طلب قماش", request.id, request.customer, request.email, `${request.item} · ${request.dimensions} · ${request.fabric}`, request.date, request.amount, request.status]),
+    ];
+    const escapeCsvValue = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`;
+    const csv = [headers, ...rows].map((row) => row.map(escapeCsvValue).join(",")).join("\r\n");
+    const file = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `decor-ma-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const logout = async () => {
+    setLogoutError("");
+    try {
+      const response = await fetch("/api/admin/logout", { method: "POST" });
+      if (!response.ok) throw new Error("Logout request failed.");
+      window.location.assign("/admin/login");
+    } catch {
+      setLogoutError("تعذّر تسجيل الخروج الآن. يرجى المحاولة مرة أخرى.");
+    }
+  };
+
   const saveSettings = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaved(true);
@@ -204,58 +323,59 @@ export default function DashboardPage() {
   return (
     <div className="dashboard-shell min-h-screen">
       <aside className={`sidebar${sidebarOpen ? " sidebar-open" : ""}`}>
-        <a className="dashboard-brand" href="/" aria-label="DÉCOR.MA storefront">
-          <span className="brand-mark">D<span>.</span></span>
-          <span className="brand-copy"><strong>DÉCOR.MA</strong><small>STUDIO & HOME</small></span>
-          <button className="sidebar-close icon-button" type="button" aria-label="Close navigation" onClick={() => setSidebarOpen(false)}><FiX /></button>
+        <a className="dashboard-brand" href="/" aria-label="العودة إلى متجر DÉCOR.MA">
+          <Image className="brand-mark" src="/images/logo.jpg" alt="شعار DÉCOR.MA الرسمي" width={42} height={42} priority />
+          <span className="brand-copy"><strong>DÉCOR.MA</strong><small>الدار والأناقة</small></span>
+          <button className="sidebar-close icon-button" type="button" aria-label="إغلاق القائمة" onClick={() => setSidebarOpen(false)}><FiX /></button>
         </a>
 
         <div className="workspace-switcher">
-          <span className="workspace-logo">D</span>
-          <span><strong>DÉCOR.MA Studio</strong><small>Fez, Morocco</small></span>
+          <Image className="workspace-logo" src="/images/logo.jpg" alt="" width={34} height={34} />
+          <span><strong>استوديو DÉCOR.MA</strong><small>فاس، المغرب</small></span>
           <FiChevronDown className="workspace-chevron" />
         </div>
 
-        <p className="sidebar-label">WORKSPACE</p>
-        <nav className="sidebar-nav" aria-label="Dashboard navigation">
-          {navItems.map(({ label, icon: Icon }) => (
+        <p className="sidebar-label">مساحة العمل</p>
+        <nav className="sidebar-nav" aria-label="التنقل في لوحة التحكم">
+          {navItems.map(({ label, title, icon: Icon }) => (
             <button key={label} type="button" className={`nav-item${section === label ? " nav-item-active" : ""}`} onClick={() => selectSection(label)}>
-              <Icon /><span>{label}</span>{label === "Fabric requests" && <i className="nav-count">12</i>}
+              <Icon /><span>{title}</span>{label === "Fabric requests" && <i className="nav-count">{pendingRequests}</i>}
             </button>
           ))}
         </nav>
 
-        <p className="sidebar-label sidebar-label-spaced">PREFERENCES</p>
-        <nav className="sidebar-nav" aria-label="Preferences">
-          <button type="button" className={`nav-item${section === "Settings" ? " nav-item-active" : ""}`} onClick={() => selectSection("Settings")}><FiSettings /><span>Settings</span></button>
+        <p className="sidebar-label sidebar-label-spaced">التفضيلات</p>
+        <nav className="sidebar-nav" aria-label="التفضيلات">
+          <button type="button" className={`nav-item${section === "Settings" ? " nav-item-active" : ""}`} onClick={() => selectSection("Settings")}><FiSettings /><span>الإعدادات</span></button>
         </nav>
 
         <div className="sidebar-promo">
           <div className="promo-icon"><FiActivity /></div>
-          <strong>Your studio is growing</strong>
-          <p>You’ve had 18% more orders this month. Keep up the lovely work.</p>
-          <button type="button" onClick={() => selectSection("Orders")}>See your orders <FiArrowRight /></button>
+          <strong>{orders.length ? "استوديوكم يواصل النمو" : "استوديوكم جاهز"}</strong>
+          <p>{orders.length ? `لديكم ${orders.length} طلبات مسجلة. نرجو لكم دوام التوفيق.` : "لوحة التحكم جاهزة لتسجيل طلبكم الأول."}</p>
+          <button type="button" onClick={() => selectSection("Orders")}>استعراض الطلبات <FiArrowRight /></button>
           <span className="promo-orb promo-orb-one" /><span className="promo-orb promo-orb-two" />
         </div>
 
         <div className="sidebar-profile">
-          <Avatar initials="MA" tone="sand" />
-          <span><strong>Marouane A.</strong><small>Store owner</small></span>
-          <button className="icon-button" type="button" aria-label="Open settings" onClick={() => selectSection("Settings")}><FiMoreHorizontal /></button>
+          <Avatar initials="AF" tone="sand" />
+          <span><strong>أمين فاضل</strong><small>مالك المتجر</small></span>
+          <button className="icon-button" type="button" aria-label="تسجيل الخروج" onClick={logout}><FiLogOut /></button>
         </div>
+        {logoutError && <p className="logout-error" role="alert">{logoutError}</p>}
       </aside>
 
-      {sidebarOpen && <button className="sidebar-backdrop" type="button" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && <button className="sidebar-backdrop" type="button" aria-label="إغلاق القائمة" onClick={() => setSidebarOpen(false)} />}
 
       <main className="dashboard-main">
         <header className="topbar">
-          <button className="icon-button mobile-menu" type="button" aria-label="Open navigation" onClick={() => setSidebarOpen(true)}><FiMenu /></button>
-          <div className="breadcrumbs"><span>Workspace</span><FiChevronRight /><strong>{section}</strong></div>
+          <button className="icon-button mobile-menu" type="button" aria-label="فتح القائمة" onClick={() => setSidebarOpen(true)}><FiMenu /></button>
+          <div className="breadcrumbs"><span>مساحة العمل</span><FiChevronRight /><strong>{sectionNames[section]}</strong></div>
           <div className="topbar-actions">
-            <a className="store-link" href="/" target="_blank" rel="noreferrer"><FiHome /><span>View storefront</span><FiArrowUpRight /></a>
+            <a className="store-link" href="/" target="_blank" rel="noreferrer"><FiHome /><span>عرض المتجر</span><FiArrowUpRight /></a>
             <span className="topbar-divider" />
-            <button className="icon-button notification-button" type="button" aria-label="Notifications"><FiBell /><i /></button>
-            <Avatar initials="MA" tone="sand" />
+            <button className="icon-button notification-button" type="button" aria-label="الإشعارات"><FiBell /><i /></button>
+            <Avatar initials="م" tone="sand" />
           </div>
         </header>
 
@@ -263,60 +383,54 @@ export default function DashboardPage() {
           {section === "Overview" && (
             <>
               <div className="page-heading">
-                <div><p className="eyebrow">THURSDAY, OCTOBER 15, 2026</p><h1>Good morning, Marouane <span>✦</span></h1><p className="page-subtitle">Here’s what’s happening with your store today.</p></div>
-                <button className="button button-outline" type="button" onClick={() => window.print()}><FiDownload /> Export report</button>
+                <div><p className="eyebrow">{new Intl.DateTimeFormat("ar-MA", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date())}</p><h1>مرحباً بعودتكم، أمين فاضل <span>✦</span></h1><p className="page-subtitle">إليكم لمحة عمّا يجري في متجركم اليوم.</p></div>
+                <button className="button button-outline" type="button" onClick={exportReport}><FiDownload /> تصدير التقرير</button>
               </div>
 
-              <section className="metrics-grid" aria-label="Store metrics">
+              <section className="metrics-grid" aria-label="مؤشرات المتجر">
                 <article className="metric-card">
-                  <div className="metric-top"><span className="metric-icon icon-moss"><FiPackage /></span><span className="metric-trend"><FiArrowUpRight /> 12.8%</span></div>
-                  <p>Total orders</p><strong>248</strong><small>Compared to last month</small>
-                  <svg className="sparkline spark-green" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,23 14,18 24,21 38,12 50,16 64,8 76,13 88,4 100,7" /></svg>
+                  <div className="metric-top"><span className="metric-icon icon-moss"><FiPackage /></span><span className="metric-trend trend-neutral">سجل الطلبات</span></div>
+                  <p>إجمالي الطلبات</p><strong>{new Intl.NumberFormat("ar-MA").format(orders.length)}</strong><small>الطلبات المسجلة في المتجر</small>
                 </article>
                 <article className="metric-card">
-                  <div className="metric-top"><span className="metric-icon icon-sand"><FiClock /></span><span className="metric-trend trend-neutral">Needs attention</span></div>
-                  <p>Pending requests</p><strong>12</strong><small>5 quotes · 7 fabric calculations</small>
-                  <svg className="sparkline spark-gold" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,21 13,17 26,19 38,11 51,14 65,9 77,13 88,5 100,8" /></svg>
+                  <div className="metric-top"><span className="metric-icon icon-sand"><FiClock /></span><span className="metric-trend trend-neutral">تتطلب المتابعة</span></div>
+                  <p>الطلبات المعلّقة</p><strong>{new Intl.NumberFormat("ar-MA").format(pendingRequests)}</strong><small>بانتظار المراجعة</small>
                 </article>
                 <article className="metric-card">
-                  <div className="metric-top"><span className="metric-icon icon-terracotta"><FiActivity /></span><span className="metric-trend"><FiArrowUpRight /> 8.2%</span></div>
-                  <p>Total revenue</p><strong>84,250 <small className="metric-currency">MAD</small></strong><small>Compared to last month</small>
-                  <svg className="sparkline spark-terracotta" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,23 12,19 25,22 37,14 49,17 63,8 74,14 86,3 100,6" /></svg>
+                  <div className="metric-top"><span className="metric-icon icon-terracotta"><FiActivity /></span><span className="metric-trend trend-neutral">مكتملة</span></div>
+                  <p>إجمالي الإيرادات</p><strong>{formatMoney(completedRevenue)}</strong><small>من الطلبات المكتملة</small>
                 </article>
                 <article className="metric-card">
-                  <div className="metric-top"><span className="metric-icon icon-blue"><FiLayers /></span><span className="metric-trend"><FiArrowUpRight /> 6.4%</span></div>
-                  <p>Active customers</p><strong>186</strong><small>Since the beginning of this year</small>
-                  <div className="metric-avatars"><Avatar initials="SB" tone="rose" /><Avatar initials="YA" tone="blue" /><Avatar initials="LE" tone="green" /><span>+182</span></div>
+                  <div className="metric-top"><span className="metric-icon icon-blue"><FiLayers /></span><span className="metric-trend trend-neutral">مسجلون</span></div>
+                  <p>العملاء النشطون</p><strong>{new Intl.NumberFormat("ar-MA").format(activeCustomers)}</strong><small>لديهم طلب مسجل</small>
+                  {activeCustomerRecords.length > 0 && <div className="metric-avatars">{activeCustomerRecords.slice(0, 3).map((customer) => <Avatar key={customer.customer} initials={customer.initials} tone={customer.tone} />)}{activeCustomers > 3 && <span>+{activeCustomers - 3}</span>}</div>}
                 </article>
               </section>
 
               <section className="analytics-grid">
                 <article className="panel revenue-panel">
-                  <div className="panel-heading"><div><p className="eyebrow">YOUR BUSINESS AT A GLANCE</p><h2>Sales overview</h2></div><button className="select-button" type="button">Last 12 months <FiChevronDown /></button></div>
-                  <div className="revenue-total"><strong>84,250 <small>MAD</small></strong><span><FiArrowUpRight /> 8.2%</span><small>vs. previous year</small></div>
-                  <TrendChart />
+                  <div className="panel-heading"><div><p className="eyebrow">لمحة عن أعمالكم</p><h2>نظرة عامة على المبيعات</h2></div><select className="select-button" aria-label="الفترة الزمنية للمبيعات" value={salesRange} onChange={(event) => setSalesRange(event.target.value as SalesRange)}><option value="12-months">آخر ١٢ شهراً</option><option value="30-days">آخر ٣٠ يوماً</option></select></div>
+                  <div className="revenue-total"><strong>{formatMoney(chartRevenue)}</strong><span>{salesRange === "12-months" ? "١٢ شهراً" : "٣٠ يوماً"}</span><small>إيرادات الطلبات المكتملة</small></div>
+                  <TrendChart data={chartData} range={salesRange} />
                 </article>
                 <article className="panel activity-panel">
-                  <div className="panel-heading"><div><p className="eyebrow">RECENT UPDATES</p><h2>Latest activity</h2></div><button className="icon-button" type="button" aria-label="More activity options"><FiMoreHorizontal /></button></div>
-                  <div className="activity-list">
-                    <div className="activity-item"><Avatar initials="SB" tone="rose" /><p><strong>Salma Benali</strong> sent a new fabric request.<small>Moroccan salon · 7 pieces</small><time>12 min ago</time></p><span className="activity-dot dot-gold" /></div>
-                    <div className="activity-item"><Avatar initials="YA" tone="blue" /><p><strong>Youssef Amrani</strong> completed an order.<small>Custom curtains · 2 panels</small><time>1 hour ago</time></p><span className="activity-dot dot-green" /></div>
-                    <div className="activity-item"><Avatar initials="LE" tone="green" /><p><strong>Lina El Fassi</strong> requested a quote.<small>Cushion covers · 12 pieces</small><time>3 hours ago</time></p><span className="activity-dot dot-gold" /></div>
-                    <div className="activity-item"><Avatar initials="OT" tone="gold" /><p><strong>Omar Tazi</strong> left a note on an order.<small>Salon set · “Please call after 5pm”</small><time>Yesterday</time></p><span className="activity-dot dot-blue" /></div>
-                  </div>
-                  <button className="activity-link" type="button" onClick={() => selectSection("Orders")}>See all activity <FiArrowRight /></button>
+                  <div className="panel-heading"><div><p className="eyebrow">آخر المستجدات</p><h2>النشاط الأخير</h2></div><button className="icon-button" type="button" aria-label="خيارات النشاط"><FiMoreHorizontal /></button></div>
+                  <div className="activity-list">{latestActivity.length ? latestActivity.map((activity) => (
+                    <div className="activity-item" key={activity.id}><Avatar initials={activity.initials} tone={activity.tone} /><p><strong>{activity.customer}</strong> {activity.action === "order" ? "أضاف طلباً جديداً." : "أرسل طلب أقمشة."}<small>{activity.detail}</small><time>{formatDate(activity.date)}</time></p><span className="activity-dot dot-green" /></div>
+                  )) : <p className="activity-empty">ستظهر طلباتكم وطلبات الأقمشة هنا.</p>}</div>
+                  <button className="activity-link" type="button" onClick={() => selectSection("Orders")}>عرض جميع الأنشطة <FiArrowRight /></button>
                 </article>
               </section>
 
               <section className="panel recent-orders">
-                <div className="panel-heading"><div><p className="eyebrow">THE LATEST FROM YOUR SHOP</p><h2>Recent orders</h2></div><button className="button button-text" type="button" onClick={() => selectSection("Orders")}>All orders <FiArrowRight /></button></div>
-                <OrdersTable orders={orders.slice(0, 4)} onSelect={setSelectedOrder} compact />
+                <div className="panel-heading recent-orders-heading"><div><p className="eyebrow">أحدث ما في متجركم</p><h2>أحدث الطلبات</h2></div><div className="recent-order-controls"><label className="search-box"><FiSearch /><input aria-label="البحث في أحدث الطلبات" placeholder="ابحث في الطلبات..." value={recentSearch} onChange={(event) => setRecentSearch(event.target.value)} /></label><select className="select-button recent-status-select" aria-label="تصفية الطلبات حسب الحالة" value={recentFilter} onChange={(event) => setRecentFilter(event.target.value as "All" | Status)}><option value="All">الكل</option><option value="Pending">قيد الانتظار</option><option value="Completed">مكتمل</option><option value="Cancelled">ملغي</option></select><button className="button button-text" type="button" onClick={() => selectSection("Orders")}>كل الطلبات <FiArrowRight /></button></div></div>
+                <OrdersTable orders={filteredRecentOrders.slice(0, 4)} compactTotal={filteredRecentOrders.length} onSelect={setSelectedOrder} onViewAll={() => selectSection("Orders")} compact />
               </section>
 
               <section className="panel featured-fabric">
-                <div className="fabric-image"><Image src="/images/image-4.jpg" alt="Warm-toned DÉCOR.MA fabric collection" fill sizes="(max-width: 760px) 100vw, 300px" /></div>
-                <div className="fabric-feature-copy"><span className="eyebrow">A LITTLE STUDIO NOTE</span><h2>Made slowly.<br />Made to feel like home.</h2><p>Each piece begins with a thoughtful choice of fabric, and ends somewhere special.</p></div>
-                <div className="fabric-feature-stat"><strong>12</strong><span>fabric requests<br />need your attention</span><button type="button" onClick={() => selectSection("Fabric requests")}>Review requests <FiArrowRight /></button></div>
+                <div className="fabric-image"><Image src="/images/image-4.jpg" alt="تشكيلة أقمشة DÉCOR.MA بألوان دافئة" fill sizes="(max-width: 760px) 100vw, 300px" /></div>
+                <div className="fabric-feature-copy"><span className="eyebrow">رسالة من الاستوديو</span><h2>صُنعت بتمهّل،<br />لتمنح البيت دفئاً.</h2><p>تبدأ كل قطعة باختيار قماش بعناية، وتنتهي في مكان يليق بكم.</p></div>
+                <div className="fabric-feature-stat"><strong>{new Intl.NumberFormat("ar-MA").format(pendingRequests)}</strong><span>طلبات أقمشة<br />بانتظار المراجعة</span><button type="button" onClick={() => selectSection("Fabric requests")}>مراجعة الطلبات <FiArrowRight /></button></div>
               </section>
             </>
           )}
@@ -324,15 +438,15 @@ export default function DashboardPage() {
           {section === "Orders" && (
             <>
               <div className="page-heading">
-                <div><p className="eyebrow">YOUR STUDIO, ORGANIZED</p><h1>Orders & inquiries</h1><p className="page-subtitle">Keep an eye on every conversation and creation.</p></div>
-                <button className="button button-dark" type="button" onClick={() => { setSelectedOrder({ id: "New inquiry", customer: "", initials: "", email: "", item: "", date: new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }), amount: 0, status: "Pending", tone: "sand" }); }}><FiPlus /> New inquiry</button>
+                <div><p className="eyebrow">ترتيب أعمال الاستوديو</p><h1>الطلبات والاستفسارات</h1><p className="page-subtitle">تابعوا جميع المحادثات والطلبات الجديدة.</p></div>
+                <button className="button button-dark" type="button" onClick={() => { setSelectedOrder({ id: "New inquiry", customer: "", initials: "", email: "", item: "", date: new Date().toISOString().slice(0, 10), amount: 0, status: "Pending", tone: "sand" }); }}><FiPlus /> إضافة طلب</button>
               </div>
               <section className="panel orders-panel">
-                <div className="orders-toolbar"><div className="filter-tabs">{(["All", "Pending", "Completed", "Cancelled"] as const).map((status) => <button key={status} className={filter === status ? "filter-tab filter-tab-active" : "filter-tab"} type="button" onClick={() => { setFilter(status); setPage(1); }}>{status}<span>{status === "All" ? orders.length : orders.filter((order) => order.status === status).length}</span></button>)}</div>
-                  <label className="search-box"><FiSearch /><input aria-label="Search orders" placeholder="Search orders..." value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} /></label>
+                <div className="orders-toolbar"><div className="filter-tabs">{(["All", "Pending", "Completed", "Cancelled"] as const).map((status) => <button key={status} className={filter === status ? "filter-tab filter-tab-active" : "filter-tab"} type="button" onClick={() => { setFilter(status); setPage(1); }}>{status === "All" ? "الكل" : status === "Pending" ? "قيد الانتظار" : status === "Completed" ? "مكتمل" : "ملغي"}<span>{new Intl.NumberFormat("ar-MA").format(status === "All" ? orders.length : orders.filter((order) => order.status === status).length)}</span></button>)}</div>
+                  <label className="search-box"><FiSearch /><input aria-label="البحث في الطلبات" placeholder="ابحث عن طلب..." value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} /></label>
                 </div>
                 <OrdersTable orders={pagedOrders} onSelect={setSelectedOrder} />
-                <div className="pagination"><span>Showing <strong>{filteredOrders.length ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, filteredOrders.length)}</strong> of <strong>{filteredOrders.length}</strong> orders</span><div><button className="icon-button" aria-label="Previous page" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}><FiChevronLeft /></button><span className="page-number">{page} / {pageCount}</span><button className="icon-button" aria-label="Next page" disabled={page >= pageCount} onClick={() => setPage((current) => current + 1)}><FiChevronRight /></button></div></div>
+                <div className="pagination"><span>عرض <strong>{new Intl.NumberFormat("ar-MA").format(filteredOrders.length ? (page - 1) * pageSize + 1 : 0)}–{new Intl.NumberFormat("ar-MA").format(Math.min(page * pageSize, filteredOrders.length))}</strong> من أصل <strong>{new Intl.NumberFormat("ar-MA").format(filteredOrders.length)}</strong> طلبات</span><div><button className="icon-button" aria-label="الصفحة السابقة" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}><FiChevronRight /></button><span className="page-number">{new Intl.NumberFormat("ar-MA").format(page)} / {new Intl.NumberFormat("ar-MA").format(pageCount)}</span><button className="icon-button" aria-label="الصفحة التالية" disabled={page >= pageCount} onClick={() => setPage((current) => current + 1)}><FiChevronLeft /></button></div></div>
               </section>
             </>
           )}
@@ -340,46 +454,46 @@ export default function DashboardPage() {
           {section === "Fabric requests" && (
             <>
               <div className="page-heading">
-                <div><p className="eyebrow">TAILORED TO EVERY HOME</p><h1>Fabric requests</h1><p className="page-subtitle">Review measurements, prepare estimates, and follow up with your clients.</p></div>
-                <span className="request-total"><span />{requests.filter((request) => request.status === "Pending").length} requests to review</span>
+                <div><p className="eyebrow">تفاصيل تناسب كل منزل</p><h1>طلبات الأقمشة</h1><p className="page-subtitle">راجعوا المقاسات، وأعدّوا عروض الأسعار، وتابعوا طلبات العملاء.</p></div>
+                <span className="request-total"><span />{new Intl.NumberFormat("ar-MA").format(pendingRequests)} طلبات بانتظار المراجعة</span>
               </div>
-              <div className="request-summary"><article><span className="summary-icon icon-sand"><FiClock /></span><div><small>Awaiting your quote</small><strong>{requests.filter((request) => request.status === "Pending").length} requests</strong></div></article><article><span className="summary-icon icon-moss"><FiCheck /></span><div><small>Processed this month</small><strong>18 requests</strong></div></article><article><span className="summary-icon icon-terracotta"><FiActivity /></span><div><small>Average response time</small><strong>2.4 hours</strong></div></article></div>
+              <div className="request-summary"><article><span className="summary-icon icon-sand"><FiClock /></span><div><small>بانتظار عرض السعر</small><strong>{new Intl.NumberFormat("ar-MA").format(pendingRequests)} طلبات</strong></div></article><article><span className="summary-icon icon-moss"><FiCheck /></span><div><small>الطلبات المكتملة</small><strong>{new Intl.NumberFormat("ar-MA").format(requests.filter((request) => request.status === "Completed").length)} طلبات</strong></div></article><article><span className="summary-icon icon-terracotta"><FiActivity /></span><div><small>إجمالي الطلبات</small><strong>{new Intl.NumberFormat("ar-MA").format(requests.length)} طلبات</strong></div></article></div>
               <section className="panel request-panel">
-                <div className="panel-heading"><div><p className="eyebrow">CLIENT MEASUREMENTS & QUOTES</p><h2>All fabric requests <span className="heading-count">{requests.length}</span></h2></div><button className="select-button" type="button" onClick={() => setRequests((current) => [...current].sort((a, b) => a.date < b.date ? 1 : -1))}><FiSliders /> Most recent <FiChevronDown /></button></div>
-                <div className="request-list">{requests.map((request) => (
+                <div className="panel-heading"><div><p className="eyebrow">مقاسات العملاء وعروض الأسعار</p><h2>جميع طلبات الأقمشة <span className="heading-count">{new Intl.NumberFormat("ar-MA").format(requests.length)}</span></h2></div><button className="select-button" type="button" onClick={() => setRequests((current) => [...current].sort((a, b) => a.date < b.date ? 1 : -1))}><FiSliders /> الأحدث أولاً <FiChevronDown /></button></div>
+                <div className="request-list">{requests.length ? requests.map((request) => (
                   <article className="request-row" key={request.id}>
                     <Avatar initials={request.initials} tone={request.tone} />
-                    <div className="request-client"><strong>{request.customer}</strong><small>{request.id} · {request.date}</small></div>
+                      <div className="request-client"><strong>{request.customer}</strong><small><bdi>{request.id}</bdi> · {formatDate(request.date)}</small></div>
                     <div className="request-item"><strong>{request.item}</strong><small>{request.dimensions}</small></div>
-                    <div className="request-fabric"><span className="fabric-swatch" /><span><strong>{request.fabric}</strong><small>Selected fabric</small></span></div>
-                    <div className="request-amount"><strong>{formatMoney(request.amount)}</strong><small>Estimated quote</small></div>
+                      <div className="request-fabric"><span className="fabric-swatch" /><span><strong>{request.fabric}</strong><small>القماش المختار</small></span></div>
+                      <div className="request-amount"><strong>{formatMoney(request.amount)}</strong><small>السعر التقديري</small></div>
                     <StatusBadge status={request.status} />
-                    <button className="button button-small button-outline" type="button" onClick={() => setSelectedRequest(request)}>{request.status === "Pending" ? "Review" : "View details"} <FiArrowRight /></button>
+                    <button className="button button-small button-outline" type="button" onClick={() => setSelectedRequest(request)}>{request.status === "Pending" ? "مراجعة" : "عرض التفاصيل"} <FiArrowRight /></button>
                   </article>
-                ))}</div>
-                <div className="request-footer"><span>Showing {requests.length} fabric requests</span><button type="button" className="text-link" onClick={() => setRequests(initialRequests)}>Reset sample data <FiArrowRight /></button></div>
+                )) : <p className="request-empty">لا توجد طلبات أقمشة بعد. ستظهر هنا الطلبات الجديدة من العملاء.</p>}</div>
+                <div className="request-footer"><span>عرض {new Intl.NumberFormat("ar-MA").format(requests.length)} طلبات أقمشة</span></div>
               </section>
-              <aside className="calculator-note"><span className="note-icon"><FiActivity /></span><p><strong>Keep your estimates consistent</strong><br />Your current fabric rates are 80 MAD/m for single-face and 90 MAD/m for double-face, plus 50 MAD delivery.</p><button type="button" onClick={() => selectSection("Settings")}>Manage rates <FiArrowRight /></button></aside>
+              <aside className="calculator-note"><span className="note-icon"><FiActivity /></span><p><strong>حافظوا على اتساق عروض الأسعار</strong><br />سعر المتر للوجه الواحد ٨٠ درهماً، وللوجهين ٩٠ درهماً، إضافةً إلى ٥٠ درهماً للتوصيل.</p><button type="button" onClick={() => selectSection("Settings")}>إدارة الأسعار <FiArrowRight /></button></aside>
             </>
           )}
 
           {section === "Settings" && (
             <>
-              <div className="page-heading"><div><p className="eyebrow">YOUR STUDIO, YOUR WAY</p><h1>Store settings</h1><p className="page-subtitle">A few details to keep your business looking its best.</p></div></div>
+              <div className="page-heading"><div><p className="eyebrow">استوديوكم على ذوقكم</p><h1>إعدادات المتجر</h1><p className="page-subtitle">حدّثوا معلومات متجركم وطريقة تواصلكم مع العملاء.</p></div></div>
               <form className="panel settings-panel" onSubmit={saveSettings}>
-                <div className="settings-section-heading"><span className="settings-icon"><FiHome /></span><div><h2>Store information</h2><p>How your studio appears to clients.</p></div></div>
+                <div className="settings-section-heading"><span className="settings-icon"><FiHome /></span><div><h2>معلومات المتجر</h2><p>كيف يظهر الاستوديو للعملاء.</p></div></div>
                 <div className="settings-fields">
-                  <label>Store name<input value={storeName} onChange={(event) => setStoreName(event.target.value)} /></label>
-                  <label>Business email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-                  <label>Phone number<input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
-                  <label>Instagram handle<input value={instagram} onChange={(event) => setInstagram(event.target.value)} /></label>
+                  <label>اسم المتجر<input value={storeName} onChange={(event) => setStoreName(event.target.value)} /></label>
+                  <label>البريد الإلكتروني<input type="email" dir="ltr" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+                  <label>رقم الهاتف<input type="tel" dir="ltr" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
+                  <label>حساب إنستغرام<input dir="ltr" value={instagram} onChange={(event) => setInstagram(event.target.value)} /></label>
                 </div>
-                <div className="settings-section-heading settings-social-heading"><span className="settings-icon"><FiSliders /></span><div><h2>Customer experience</h2><p>Simple details that make it easy to reach you.</p></div></div>
-                <label className="settings-toggle"><span><strong>Show your phone number on the storefront</strong><small>Clients can get in touch directly about their orders.</small></span><input type="checkbox" defaultChecked /><i /></label>
-                <label className="settings-toggle"><span><strong>Accept new fabric requests</strong><small>Let clients submit new measurements and quote requests.</small></span><input type="checkbox" defaultChecked /><i /></label>
-                <div className="settings-footer">{saved && <span className="save-confirmation"><FiCheck /> Your changes have been saved.</span>}<button className="button button-dark" type="submit"><FiCheck /> Save changes</button></div>
+                <div className="settings-section-heading settings-social-heading"><span className="settings-icon"><FiSliders /></span><div><h2>تجربة العملاء</h2><p>تفاصيل تساعد العملاء على التواصل معكم بسهولة.</p></div></div>
+                <label className="settings-toggle"><span><strong>إظهار رقم الهاتف في المتجر</strong><small>يمكن للعملاء التواصل معكم مباشرةً بشأن طلباتهم.</small></span><input type="checkbox" defaultChecked /><i /></label>
+                <label className="settings-toggle"><span><strong>استقبال طلبات الأقمشة الجديدة</strong><small>اسمحوا للعملاء بإرسال المقاسات وطلبات عروض الأسعار.</small></span><input type="checkbox" defaultChecked /><i /></label>
+                <div className="settings-footer">{saved && <span className="save-confirmation"><FiCheck /> تم حفظ التغييرات.</span>}<button className="button button-dark" type="submit"><FiCheck /> حفظ التغييرات</button></div>
               </form>
-              <div className="settings-help"><span className="help-icon"><FiMail /></span><div><strong>Need a hand?</strong><small>We’re always happy to help your studio grow.</small></div><a href="mailto:bonjour@decor.ma">Contact support <FiArrowUpRight /></a></div>
+              <div className="settings-help"><span className="help-icon"><FiMail /></span><div><strong>هل تحتاجون إلى المساعدة؟</strong><small>يسعدنا دائماً دعم نمو استوديوكم.</small></div><a href="mailto:bonjour@decor.ma">تواصلوا مع الدعم <FiArrowUpRight /></a></div>
             </>
           )}
         </div>
@@ -388,20 +502,20 @@ export default function DashboardPage() {
       {(selectedOrder || selectedRequest) && (
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setSelectedOrder(null); setSelectedRequest(null); } }}>
           <section className="detail-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title">
-            <div className="modal-heading"><div><p className="eyebrow">{selectedRequest ? "FABRIC CALCULATION" : "ORDER DETAILS"}</p><h2 id="detail-title">{selectedRequest?.id ?? selectedOrder?.id}</h2></div><button className="icon-button" type="button" aria-label="Close details" onClick={() => { setSelectedOrder(null); setSelectedRequest(null); }}><FiX /></button></div>
-            <div className="modal-client">{selectedRequest ? <Avatar initials={selectedRequest.initials} tone={selectedRequest.tone} /> : selectedOrder && <Avatar initials={selectedOrder.initials || "MA"} tone={selectedOrder.tone} />}<div><strong>{selectedRequest?.customer ?? selectedOrder?.customer ?? "New client inquiry"}</strong><small>{selectedRequest?.email ?? selectedOrder?.email ?? "Add the client’s contact details after saving"}</small></div><StatusBadge status={selectedRequest?.status ?? selectedOrder?.status ?? "Pending"} /></div>
+            <div className="modal-heading"><div><p className="eyebrow">{selectedRequest ? "تفاصيل طلب القماش" : "تفاصيل الطلب"}</p><h2 id="detail-title"><bdi>{selectedRequest?.id ?? selectedOrder?.id}</bdi></h2></div><button className="icon-button" type="button" aria-label="إغلاق التفاصيل" onClick={() => { setSelectedOrder(null); setSelectedRequest(null); }}><FiX /></button></div>
+            <div className="modal-client">{selectedRequest ? <Avatar initials={selectedRequest.initials} tone={selectedRequest.tone} /> : selectedOrder && <Avatar initials={selectedOrder.initials || "م"} tone={selectedOrder.tone} />}<div><strong>{selectedRequest?.customer ?? selectedOrder?.customer ?? "استفسار عميل جديد"}</strong><small dir="ltr">{selectedRequest?.email ?? selectedOrder?.email ?? "أضيفوا بيانات التواصل عند الحفظ"}</small></div><StatusBadge status={selectedRequest?.status ?? selectedOrder?.status ?? "Pending"} /></div>
             {selectedRequest ? (
               <div className="detail-fields">
-                <div className="detail-measurements"><h3>Client measurements</h3><div><span>Project</span><strong>{selectedRequest.item}</strong></div><div><span>Dimensions</span><strong>{selectedRequest.dimensions}</strong></div><div><span>Chosen fabric</span><strong>{selectedRequest.fabric}</strong></div><div><span>Submitted</span><strong>{selectedRequest.date}</strong></div></div>
-                <label>Estimated price (MAD)<input type="number" min="0" step="50" value={selectedRequest.amount} onChange={(event) => updateRequest({ amount: Number(event.target.value) })} /></label>
-                <label>Request status<select value={selectedRequest.status} onChange={(event) => updateRequest({ status: event.target.value as Status })}><option>Pending</option><option>Completed</option><option>Cancelled</option></select></label>
+                <div className="detail-measurements"><h3>مقاسات العميل</h3><div><span>المشروع</span><strong>{selectedRequest.item}</strong></div><div><span>الأبعاد</span><strong>{selectedRequest.dimensions}</strong></div><div><span>القماش المختار</span><strong>{selectedRequest.fabric}</strong></div><div><span>تاريخ الإرسال</span><strong>{formatDate(selectedRequest.date)}</strong></div></div>
+                <label>السعر التقديري (درهم)<input type="number" min="0" step="50" value={selectedRequest.amount} onChange={(event) => updateRequest({ amount: Number(event.target.value) })} /></label>
+                <label>حالة الطلب<select value={selectedRequest.status} onChange={(event) => updateRequest({ status: event.target.value as Status })}><option value="Pending">قيد الانتظار</option><option value="Completed">مكتمل</option><option value="Cancelled">ملغي</option></select></label>
               </div>
             ) : selectedOrder ? (
               <div className="detail-fields">
-                {selectedOrder.id === "New inquiry" ? <><label>Client name<input autoFocus placeholder="e.g. Amina El Fassi" onChange={(event) => setSelectedOrder({ ...selectedOrder, customer: event.target.value, initials: event.target.value.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() })} /></label><label>Product or inquiry<input placeholder="e.g. Moroccan salon · 5 pieces" onChange={(event) => setSelectedOrder({ ...selectedOrder, item: event.target.value })} /></label><label>Estimated amount (MAD)<input type="number" min="0" value={selectedOrder.amount} onChange={(event) => setSelectedOrder({ ...selectedOrder, amount: Number(event.target.value) })} /></label></> : <><div className="detail-measurements"><h3>Order summary</h3><div><span>Product</span><strong>{selectedOrder.item}</strong></div><div><span>Order date</span><strong>{selectedOrder.date}</strong></div><div><span>Customer email</span><strong>{selectedOrder.email}</strong></div><div><span>Total</span><strong>{formatMoney(selectedOrder.amount)}</strong></div></div><label>Order status<select value={selectedOrder.status} onChange={(event) => updateOrder(selectedOrder.id, { status: event.target.value as Status })}><option>Pending</option><option>Completed</option><option>Cancelled</option></select></label></>}
+                {selectedOrder.id === "New inquiry" ? <><label>اسم العميل<input autoFocus placeholder="مثال: أمينة الفاسي" onChange={(event) => setSelectedOrder({ ...selectedOrder, customer: event.target.value, initials: event.target.value.split(" ").map((part) => part[0]).join("").slice(0, 2) })} /></label><label>المنتج أو الاستفسار<input placeholder="مثال: صالون مغربي · ٥ قطع" onChange={(event) => setSelectedOrder({ ...selectedOrder, item: event.target.value })} /></label><label>السعر التقديري (درهم)<input type="number" min="0" value={selectedOrder.amount} onChange={(event) => setSelectedOrder({ ...selectedOrder, amount: Number(event.target.value) })} /></label></> : <><div className="detail-measurements"><h3>ملخص الطلب</h3><div><span>المنتج</span><strong>{selectedOrder.item}</strong></div><div><span>تاريخ الطلب</span><strong>{formatDate(selectedOrder.date)}</strong></div><div><span>البريد الإلكتروني للعميل</span><strong dir="ltr">{selectedOrder.email}</strong></div><div><span>الإجمالي</span><strong>{formatMoney(selectedOrder.amount)}</strong></div></div><label>حالة الطلب<select value={selectedOrder.status} onChange={(event) => updateOrder(selectedOrder.id, { status: event.target.value as Status })}><option value="Pending">قيد الانتظار</option><option value="Completed">مكتمل</option><option value="Cancelled">ملغي</option></select></label></>}
               </div>
             ) : null}
-            <div className="modal-actions"><button type="button" className="button button-outline" onClick={() => { setSelectedOrder(null); setSelectedRequest(null); }}>Close</button>{selectedOrder?.id === "New inquiry" && <button type="button" className="button button-dark" onClick={() => { const next: Order = { ...selectedOrder, id: `DM-${1049 + orders.length - initialOrders.length}`, customer: selectedOrder.customer || "New client", initials: selectedOrder.initials || "NC", item: selectedOrder.item || "New inquiry", email: "Client contact pending", tone: "sand" }; setOrders((current) => [next, ...current]); setSelectedOrder(null); }}>Save inquiry</button>}{selectedRequest && <button type="button" className="button button-dark" onClick={() => { setRequests((current) => current.map((request) => request.id === selectedRequest.id ? selectedRequest : request)); setSelectedRequest(null); }}>Save quote <FiCheck /></button>}</div>
+            <div className="modal-actions"><button type="button" className="button button-outline" onClick={() => { setSelectedOrder(null); setSelectedRequest(null); }}>إغلاق</button>{selectedOrder?.id === "New inquiry" && <button type="button" className="button button-dark" onClick={() => { const next: Order = { ...selectedOrder, id: getNextOrderId(orders), customer: selectedOrder.customer || "عميل جديد", initials: selectedOrder.initials || "عم", item: selectedOrder.item || "استفسار جديد", email: "بيانات التواصل غير متوفرة", tone: "sand" }; setOrders((current) => [next, ...current]); setSelectedOrder(null); }}>حفظ الطلب</button>}{selectedRequest && <button type="button" className="button button-dark" onClick={() => { setRequests((current) => current.map((request) => request.id === selectedRequest.id ? selectedRequest : request)); setSelectedRequest(null); }}>حفظ العرض <FiCheck /></button>}</div>
           </section>
         </div>
       )}

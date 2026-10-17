@@ -1,0 +1,53 @@
+.admin-login {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 28px 18px;
+  background:
+    radial-gradient(ellipse at 16% 15%, rgba(184, 153, 104, .12), transparent 34%),
+    linear-gradient(145deg, #f6f5ef, #fbfaf6 55%, #eef2ec);
+  color: #2d332d;
+  direction: rtl;
+  font-family: inherit;
+}
+
+.login-card {
+  width: min(420px, 100%);
+  padding: 43px 42px 33px;
+  border: 1px solid #e9e9e1;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 24px 70px rgba(48, 55, 46, .08);
+}
+
+.login-brand {
+  display: grid;
+  width: 76px;
+  height: 76px;
+  overflow: hidden;
+  margin: 0 auto 26px;
+  border: 1px solid #ece9e0;
+  border-radius: 12px;
+}
+
+.login-brand img { width: 100%; height: 100%; object-fit: cover; }
+.login-eyebrow { margin: 0 0 8px; color: #8d967e; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-align: center; }
+.login-card h1 { margin: 0; color: #30382f; font-family: inherit; font-size: 31px; font-weight: 600; text-align: center; }
+.login-intro { margin: 9px 0 28px; color: #898e84; font-size: 12px; line-height: 1.7; text-align: center; }
+.login-card form { display: grid; gap: 9px; }
+.login-card form > label { color: #586054; font-size: 10px; font-weight: 600; }
+.login-password { display: flex; height: 43px; align-items: center; gap: 10px; padding: 0 12px; border: 1px solid #e5e8e0; border-radius: 6px; color: #8e9688; }
+.login-password:focus-within { border-color: #8da18a; box-shadow: 0 0 0 3px #edf2eb; }
+.login-password svg { width: 15px; height: 15px; flex: 0 0 auto; }
+.login-password input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: #384036; font: inherit; font-size: 12px; }
+.login-password input::placeholder { color: #a4a99f; }
+.login-card form > button { display: flex; height: 42px; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; border: 0; border-radius: 6px; background: #405946; color: #fff; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; transition: background .18s ease; }
+.login-card form > button:hover { background: #314937; }
+.login-card form > button:disabled { cursor: wait; opacity: .72; }
+.login-card form > button svg { width: 14px; height: 14px; transform: scaleX(-1); }
+.login-error { margin: 1px 0 0; color: #a15f52; font-size: 10px; }
+.login-footnote { margin: 25px 0 0; padding-top: 17px; border-top: 1px solid #eff0eb; color: #a1a499; font-family: Georgia, "Times New Roman", serif; font-size: 11px; font-style: italic; text-align: center; }
+
+@media (max-width: 480px) {
+  .login-card { padding: 35px 23px 27px; }
+}

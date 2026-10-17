@@ -1,0 +1,157 @@
+
+> decor-ma@1.0.0 dev
+> next dev
+
+   ▲ Next.js 15.5.27
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.100.87:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 6s
+ ○ Compiling / ...
+ ✓ Compiled / in 4.6s (590 modules)
+ GET / 200 in 5989ms
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 1076ms (116 modules)
+ ○ Compiling /admin/login ...
+ ✓ Compiled /admin/login in 2.2s (625 modules)
+ GET /admin/login 200 in 2865ms
+ GET /admin/login 200 in 139ms
+ GET /admin/login 200 in 87ms
+ GET /admin/login 200 in 115ms
+ GET /admin/login 200 in 103ms
+ GET / 200 in 381ms
+ GET / 200 in 246ms
+ GET / 200 in 182ms
+ GET / 200 in 514ms
+ GET /admin/login 200 in 118ms
+ ○ Compiling /api/admin/login ...
+ ✓ Compiled /api/admin/login in 1067ms (620 modules)
+ POST /api/admin/login 200 in 1417ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 1695ms (647 modules)
+ GET /dashboard 200 in 2647ms
+ GET / 200 in 417ms
+ GET /dashboard 200 in 1688ms
+ ✓ Compiled in 5.4s (641 modules)
+ ✓ Compiled in 1588ms (632 modules)
+ ✓ Compiled in 1989ms (632 modules)
+ ✓ Compiled in 1441ms (632 modules)
+ ✓ Compiled in 1665ms (632 modules)
+ ✓ Compiled in 1334ms (632 modules)
+ ✓ Compiled in 2.5s (645 modules)
+ ✓ Compiled in 1577ms (645 modules)
+ ✓ Compiled in 3.8s (659 modules)
+ GET /admin/login 200 in 408ms
+ ○ Compiling /api/admin/login ...
+ ✓ Compiled /api/admin/login in 745ms (385 modules)
+ POST /api/admin/login 200 in 1116ms
+ ⨯ Error: Cannot find module './897.js'
+Require stack:
+- C:\Users\lenovo\Desktop\Decor.MA\.next\server\webpack-runtime.js
+- C:\Users\lenovo\Desktop\Decor.MA\.next\server\app\api\admin\login\route.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\require.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\load-components.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\utils.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\swc\options.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\swc\index.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\config.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\next.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\lenovo\Desktop\Decor.MA\.next\server\app\dashboard\page.js:2:43382)
+    at Object.<anonymous> (C:\Users\lenovo\Desktop\Decor.MA\.next\server\app\dashboard\page.js:2:43438) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/dashboard'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 6.6s (1009 modules)
+ GET /dashboard 500 in 7857ms
+ ✓ Compiled in 3s (1022 modules)
+ GET /admin/login 200 in 169ms
+ POST /api/admin/login 200 in 82ms
+ GET /dashboard 200 in 133ms
+ GET / 200 in 102ms
+ ○ Compiling /api/admin/logout ...
+ ✓ Compiled /api/admin/logout in 976ms (892 modules)
+ POST /api/admin/logout 200 in 1206ms
+ ⨯ Error: Cannot find module './897.js'
+Require stack:
+- C:\Users\lenovo\Desktop\Decor.MA\.next\server\webpack-runtime.js
+- C:\Users\lenovo\Desktop\Decor.MA\.next\server\app\api\admin\logout\route.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\require.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\load-components.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\utils.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\swc\options.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\swc\index.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\config.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\next.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\lenovo\Desktop\Decor.MA\.next\server\app\admin\login\page.js:2:10374)
+    at Object.<anonymous> (C:\Users\lenovo\Desktop\Decor.MA\.next\server\app\admin\login\page.js:2:10431) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/admin/login'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 651ms (993 modules)
+ ⨯ Error: Cannot find module './611.js'
+Require stack:
+- C:\Users\lenovo\Desktop\Decor.MA\.next\server\webpack-runtime.js
+- C:\Users\lenovo\Desktop\Decor.MA\.next\server\pages\_document.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\require.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\load-components.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\utils.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\swc\options.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\swc\index.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\config.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\next.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\lenovo\Desktop\Decor.MA\.next\server\pages\_document.js:1:321)
+    at Object.<anonymous> (C:\Users\lenovo\Desktop\Decor.MA\.next\server\pages\_document.js:1:366) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ GET /admin/login 500 in 7229ms
+ ⨯ Error: Cannot find module './897.js'
+Require stack:
+- C:\Users\lenovo\Desktop\Decor.MA\.next\server\webpack-runtime.js
+- C:\Users\lenovo\Desktop\Decor.MA\.next\server\pages\_document.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\require.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\load-components.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\utils.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\swc\options.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\swc\index.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\config.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\next.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\lenovo\Desktop\Decor.MA\.next\server\app\admin\login\page.js:2:10374)
+    at Object.<anonymous> (C:\Users\lenovo\Desktop\Decor.MA\.next\server\app\admin\login\page.js:2:10431) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/admin/login'
+}
+ ⨯ Error: Cannot find module './611.js'
+Require stack:
+- C:\Users\lenovo\Desktop\Decor.MA\.next\server\webpack-runtime.js
+- C:\Users\lenovo\Desktop\Decor.MA\.next\server\pages\_document.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\require.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\load-components.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\utils.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\swc\options.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\swc\index.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\build\next-config-ts\transpile-config.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\config.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\next.js
+- C:\Users\lenovo\Desktop\Decor.MA\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\lenovo\Desktop\Decor.MA\.next\server\pages\_document.js:1:321)
+    at Object.<anonymous> (C:\Users\lenovo\Desktop\Decor.MA\.next\server\pages\_document.js:1:366) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ GET /admin/login 500 in 175ms
