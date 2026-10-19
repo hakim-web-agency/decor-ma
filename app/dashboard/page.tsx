@@ -1,7 +1,8 @@
 "use client";
 
+import { upload } from "@vercel/blob/client";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FiActivity,
   FiArrowRight,
@@ -15,6 +16,7 @@ import {
   FiDownload,
   FiGrid,
   FiHome,
+  FiImage,
   FiLayers,
   FiLogOut,
   FiMail,
@@ -28,6 +30,14 @@ import {
   FiX,
 } from "react-icons/fi";
 import "./dashboard.css";
+import { DEFAULT_PRICING, type PricingSettings } from "@/lib/pricing";
+
+type CatalogImage = {
+  id: string;
+  category: "fabric" | "project";
+  title: string;
+  src: string;
+};
 
 type Section = "Overview" | "Orders" | "Fabric requests" | "Settings";
 type Status = "Pending" | "Completed" | "Cancelled";
@@ -239,11 +249,54 @@ export default function DashboardPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<FabricRequest | null>(null);
   const [saved, setSaved] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [pricingLoading, setPricingLoading] = useState(true);
+  const [pricing, setPricing] = useState<PricingSettings>(DEFAULT_PRICING);
+  const [catalog, setCatalog] = useState<CatalogImage[]>([]);
+  const [uploadCategory, setUploadCategory] = useState<CatalogImage["category"]>("fabric");
+  const [uploadTitle, setUploadTitle] = useState("");
+  const [mediaBusyId, setMediaBusyId] = useState("");
+  const [settingsError, setSettingsError] = useState("");
+  const [mediaError, setMediaError] = useState("");
   const [storeName, setStoreName] = useState("DÉCOR.MA");
   const [email, setEmail] = useState("bonjour@decor.ma");
   const [phone, setPhone] = useState("+212 679 299 620");
   const [instagram, setInstagram] = useState("@decor.ma");
   const [logoutError, setLogoutError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/store-settings")
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error ?? "تعذّر تحميل الأسعار.");
+        return data as { pricing: PricingSettings };
+      })
+      .then((data) => {
+        if (active) setPricing(data.pricing);
+      })
+      .catch((error: unknown) => {
+        if (active) setSettingsError(error instanceof Error ? error.message : "تعذّر تحميل الأسعار.");
+      })
+      .finally(() => {
+        if (active) setPricingLoading(false);
+      });
+    fetch("/api/catalog")
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error ?? "تعذّر تحميل الصور.");
+        return data as { catalog: CatalogImage[] };
+      })
+      .then((data) => {
+        if (active) setCatalog(data.catalog);
+      })
+      .catch((error: unknown) => {
+        if (active) setMediaError(error instanceof Error ? error.message : "تعذّر تحميل الصور.");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredOrders = useMemo(() => orders.filter((order) => {
     const matchesSearch = `${order.id} ${order.customer} ${order.item}`.toLowerCase().includes(search.toLowerCase());
@@ -314,10 +367,76 @@ export default function DashboardPage() {
     }
   };
 
-  const saveSettings = (event: React.FormEvent<HTMLFormElement>) => {
+  const saveSettings = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 3000);
+    setSettingsError("");
+    setSaved(false);
+    setSavingSettings(true);
+    try {
+      const response = await fetch("/api/store-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pricing }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "تعذّر حفظ الأسعار.");
+      setPricing(data.pricing);
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : "تعذّر حفظ الأسعار.");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const uploadCatalogImage = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    image?: CatalogImage,
+  ) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+    setMediaError("");
+    setMediaBusyId(image?.id ?? "new");
+    try {
+      const extension = file.type === "image/jpeg" ? "jpg" : file.type.slice("image/".length);
+      await upload(`images/${crypto.randomUUID()}.${extension}`, file, {
+        access: "public",
+        contentType: file.type,
+        handleUploadUrl: "/api/catalog/upload",
+        clientPayload: JSON.stringify({
+          category: image?.category ?? uploadCategory,
+          title: image?.title ?? uploadTitle.trim(),
+          ...(image ? { id: image.id } : {}),
+        }),
+      });
+      const response = await fetch("/api/catalog");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "تعذّر تحميل كتالوج الصور.");
+      setCatalog(data.catalog);
+      setUploadTitle("");
+    } catch (error) {
+      setMediaError(error instanceof Error ? error.message : "تعذّر رفع الصورة.");
+    } finally {
+      setMediaBusyId("");
+    }
+  };
+
+  const deleteCatalogImage = async (image: CatalogImage) => {
+    if (!window.confirm(`هل تريدون حذف الصورة "${image.title}" من المتجر؟`)) return;
+    setMediaError("");
+    setMediaBusyId(image.id);
+    try {
+      const response = await fetch(`/api/catalog/${encodeURIComponent(image.id)}`, { method: "DELETE" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "تعذّر حذف الصورة.");
+      setCatalog(data.catalog);
+    } catch (error) {
+      setMediaError(error instanceof Error ? error.message : "تعذّر حذف الصورة.");
+    } finally {
+      setMediaBusyId("");
+    }
   };
 
   return (
@@ -473,7 +592,7 @@ export default function DashboardPage() {
                 )) : <p className="request-empty">لا توجد طلبات أقمشة بعد. ستظهر هنا الطلبات الجديدة من العملاء.</p>}</div>
                 <div className="request-footer"><span>عرض {new Intl.NumberFormat("ar-MA").format(requests.length)} طلبات أقمشة</span></div>
               </section>
-              <aside className="calculator-note"><span className="note-icon"><FiActivity /></span><p><strong>حافظوا على اتساق عروض الأسعار</strong><br />سعر المتر للوجه الواحد ٨٠ درهماً، وللوجهين ٩٠ درهماً، إضافةً إلى ٥٠ درهماً للتوصيل.</p><button type="button" onClick={() => selectSection("Settings")}>إدارة الأسعار <FiArrowRight /></button></aside>
+              <aside className="calculator-note"><span className="note-icon"><FiActivity /></span><p><strong>حافظوا على اتساق عروض الأسعار</strong><br />سعر المتر للوجه الواحد {formatMoney(pricing.singleFace)}، وللوجهين {formatMoney(pricing.doubleFace)}، إضافةً إلى {formatMoney(pricing.shippingCost)} للتوصيل.</p><button type="button" onClick={() => selectSection("Settings")}>إدارة الأسعار <FiArrowRight /></button></aside>
             </>
           )}
 
@@ -488,11 +607,41 @@ export default function DashboardPage() {
                   <label>رقم الهاتف<input type="tel" dir="ltr" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
                   <label>حساب إنستغرام<input dir="ltr" value={instagram} onChange={(event) => setInstagram(event.target.value)} /></label>
                 </div>
+                <div className="settings-section-heading settings-social-heading"><span className="settings-icon"><FiActivity /></span><div><h2>أسعار الحاسبة</h2><p>تُحدّث هذه الأسعار حاسبة المتر في المتجر مباشرةً.</p></div></div>
+                <div className="settings-fields pricing-fields">
+                  <label>سعر المتر للوجه الواحد (درهم)<input type="number" min="0" max="1000000" step="0.01" value={pricing.singleFace} onChange={(event) => setPricing((current) => ({ ...current, singleFace: Number(event.target.value) }))} disabled={pricingLoading} required /></label>
+                  <label>سعر المتر للوجهين (درهم)<input type="number" min="0" max="1000000" step="0.01" value={pricing.doubleFace} onChange={(event) => setPricing((current) => ({ ...current, doubleFace: Number(event.target.value) }))} disabled={pricingLoading} required /></label>
+                  <label>رسوم التوصيل (درهم)<input type="number" min="0" max="1000000" step="0.01" value={pricing.shippingCost} onChange={(event) => setPricing((current) => ({ ...current, shippingCost: Number(event.target.value) }))} disabled={pricingLoading} required /></label>
+                </div>
+                {settingsError && <p className="settings-error" role="alert">{settingsError}</p>}
                 <div className="settings-section-heading settings-social-heading"><span className="settings-icon"><FiSliders /></span><div><h2>تجربة العملاء</h2><p>تفاصيل تساعد العملاء على التواصل معكم بسهولة.</p></div></div>
                 <label className="settings-toggle"><span><strong>إظهار رقم الهاتف في المتجر</strong><small>يمكن للعملاء التواصل معكم مباشرةً بشأن طلباتهم.</small></span><input type="checkbox" defaultChecked /><i /></label>
                 <label className="settings-toggle"><span><strong>استقبال طلبات الأقمشة الجديدة</strong><small>اسمحوا للعملاء بإرسال المقاسات وطلبات عروض الأسعار.</small></span><input type="checkbox" defaultChecked /><i /></label>
-                <div className="settings-footer">{saved && <span className="save-confirmation"><FiCheck /> تم حفظ التغييرات.</span>}<button className="button button-dark" type="submit"><FiCheck /> حفظ التغييرات</button></div>
+                <div className="settings-footer">{saved && <span className="save-confirmation"><FiCheck /> تم حفظ التغييرات.</span>}<button className="button button-dark" type="submit" disabled={savingSettings || pricingLoading}>{savingSettings ? "جارٍ الحفظ..." : <><FiCheck /> حفظ التغييرات</>}</button></div>
               </form>
+              <section className="panel image-manager-panel">
+                <div className="settings-section-heading"><span className="settings-icon"><FiImage /></span><div><h2>إدارة صور المتجر</h2><p>حدّثوا صور الأقمشة وأعمال الصالون أو أضيفوا صوراً جديدة.</p></div></div>
+                <form className="image-upload-form" onSubmit={(event) => event.preventDefault()}>
+                  <label>نوع الصورة<select value={uploadCategory} onChange={(event) => setUploadCategory(event.target.value as CatalogImage["category"])}><option value="fabric">قماش</option><option value="project">عمل / منتج</option></select></label>
+                  <label>اسم الصورة<input value={uploadTitle} onChange={(event) => setUploadTitle(event.target.value)} maxLength={100} required /></label>
+                  <label className="image-file-control"><FiImage /> رفع صورة جديدة<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => uploadCatalogImage(event)} disabled={Boolean(mediaBusyId)} /></label>
+                </form>
+                {mediaError && <p className="settings-error" role="alert">{mediaError}</p>}
+                <div className="managed-image-grid">
+                  {catalog.map((image) => (
+                    <article className="managed-image-card" key={image.id}>
+                      <Image src={image.src} alt={image.title} width={480} height={320} unoptimized />
+                      <div className="managed-image-copy"><strong>{image.title}</strong><small>{image.category === "fabric" ? "قماش" : "عمل / منتج"}</small></div>
+                      <div className="managed-image-actions">
+                        <label className="button button-small button-outline">{mediaBusyId === image.id ? "جارٍ التحديث..." : "تغيير الصورة"}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => uploadCatalogImage(event, image)} disabled={Boolean(mediaBusyId)} /></label>
+                        <button className="button button-small button-outline image-delete-button" type="button" onClick={() => deleteCatalogImage(image)} disabled={Boolean(mediaBusyId)} aria-label={`حذف صورة ${image.title}`}>حذف</button>
+                      </div>
+                    </article>
+                  ))}
+                  {!catalog.length && !mediaError && <p className="image-catalog-empty">لا توجد صور في الكتالوج حالياً.</p>}
+                </div>
+                <p className="image-manager-hint">الصيغ المدعومة: JPG وPNG وWebP · الحد الأقصى: 5 ميغابايت للصورة.</p>
+              </section>
               <div className="settings-help"><span className="help-icon"><FiMail /></span><div><strong>هل تحتاجون إلى المساعدة؟</strong><small>يسعدنا دائماً دعم نمو استوديوكم.</small></div><a href="mailto:bonjour@decor.ma">تواصلوا مع الدعم <FiArrowUpRight /></a></div>
             </>
           )}

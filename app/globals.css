@@ -702,6 +702,13 @@ a {
   line-height: 1.9;
 }
 
+.data-load-error {
+  margin: 10px 0 0;
+  color: #a44838;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
 .calculator-stamp {
   display: grid;
   width: 116px;

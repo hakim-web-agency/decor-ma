@@ -2,8 +2,11 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { DEFAULT_PRICING, type PricingSettings } from "@/lib/pricing";
 
 const fabrics = Array.from({ length: 12 }, (_, index) => ({
+  id: `fabric-${index + 1}`,
+  category: "fabric" as const,
   number: index + 1,
   label: [
     "خامة صوف",
@@ -28,11 +31,22 @@ const heroSlides = Array.from({ length: 3 }, (_, index) => ({
 }));
 
 const projects = Array.from({ length: 7 }, (_, index) => ({
+  id: `project-${index + 1}`,
+  category: "project" as const,
+  title: `مشروع صالون ${index + 1}`,
   src: `/salon${index + 1}.jpg`,
   number: index + 1,
 }));
 
 type Language = "ar" | "fr" | "en";
+type CatalogImage = {
+  id: string;
+  category: "fabric" | "project";
+  title: string;
+  src: string;
+  number: number;
+  label?: string;
+};
 const isLanguage = (value: string): value is Language =>
   value === "ar" || value === "fr" || value === "en";
 
@@ -88,7 +102,9 @@ const copy = {
     calculatorCopy:
       "أضيفوا القطع وحددوا طول كل قطعة وعرضها القياسي. اختاروا لوناً واحداً أو نسّقوا لونين بخيار دو فاس.",
     priceNote:
-      "المتر العادي 80 درهماً، ودو فاس 90 درهماً. تضاف 50 درهماً للنقل، ثم يُقرّب المجموع لأقرب 5 دراهم.",
+      "سعر المتر للوجه الواحد {single} درهماً، وللوجهين {double} درهماً. تضاف {shipping} درهماً للتوصيل، ثم يُقرّب المجموع لأقرب 5 دراهم.",
+    pricingError: "تعذّر تحميل الأسعار المحدّثة؛ المعروض حالياً هو السعر الافتراضي.",
+    catalogError: "تعذّر تحميل كتالوج الصور المحدّث؛ الصور الافتراضية معروضة.",
     madeInFes: "صنع في فاس",
     estimate: "تقدير أولي",
     piecesTitle: "مقاسات القطع",
@@ -175,7 +191,9 @@ const copy = {
     calculatorCopy:
       "Ajoutez vos pièces et indiquez leur longueur et largeur standard. Choisissez une couleur ou associez-en deux avec l’option double face.",
     priceNote:
-      "Tissu simple : 80 MAD/m, double face : 90 MAD/m. Transport : 50 MAD. Le total est arrondi aux 5 MAD les plus proches.",
+      "Simple face : {single} MAD/m, double face : {double} MAD/m. Livraison : {shipping} MAD. Le total est arrondi aux 5 MAD les plus proches.",
+    pricingError: "Impossible de charger les tarifs actualisés ; les tarifs par défaut sont affichés.",
+    catalogError: "Impossible de charger les images actualisées ; les images par défaut sont affichées.",
     madeInFes: "Fabriqué à Fès",
     estimate: "Estimation",
     piecesTitle: "Dimensions des pièces",
@@ -262,7 +280,9 @@ const copy = {
     calculatorCopy:
       "Add pieces and enter each length and standard width. Choose one color or pair two with the double-face option.",
     priceNote:
-      "Single face: 80 MAD/m; double face: 90 MAD/m. Transport: 50 MAD. The total is rounded to the nearest 5 MAD.",
+      "Single face: {single} MAD/m; double face: {double} MAD/m. Delivery: {shipping} MAD. The total is rounded to the nearest 5 MAD.",
+    pricingError: "Could not load the updated pricing; default prices are currently shown.",
+    catalogError: "Could not load the updated image catalog; default images are shown.",
     madeInFes: "Made in Fez",
     estimate: "Estimate",
     piecesTitle: "Piece measurements",
@@ -346,6 +366,13 @@ function SectionHeading({
 
 export default function HomePage() {
   const [language, setLanguage] = useState<Language>("ar");
+  const [catalogFabrics, setCatalogFabrics] = useState<CatalogImage[]>(
+    fabrics.map((fabric) => ({ ...fabric, title: fabric.label })),
+  );
+  const [catalogProjects, setCatalogProjects] = useState<CatalogImage[]>(projects);
+  const [catalogError, setCatalogError] = useState(false);
+  const [pricing, setPricing] = useState<PricingSettings>(DEFAULT_PRICING);
+  const [pricingError, setPricingError] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<{
     src: string;
     alt: string;
@@ -365,11 +392,72 @@ export default function HomePage() {
   ]);
   const nextPieceId = useRef(2);
   const t = copy[language];
-  const colors = fabrics.map((fabric, index) => ({
-    name: t.fabricLabels[index],
+  const getFabricLabel = (fabric: CatalogImage) => {
+    const original = fabrics.find((item) => item.id === fabric.id);
+    return original?.label === fabric.title
+      ? t.fabricLabels[fabric.number - 1] ?? fabric.title
+      : fabric.title;
+  };
+  const colors = catalogFabrics.map((fabric) => ({
+    name: getFabricLabel(fabric),
     src: fabric.src,
     number: fabric.number,
   }));
+  const priceNote = t.priceNote
+    .replace("{single}", formatMoney(pricing.singleFace, language))
+    .replace("{double}", formatMoney(pricing.doubleFace, language))
+    .replace("{shipping}", formatMoney(pricing.shippingCost, language));
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/store-settings")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Pricing request failed.");
+        return response.json() as Promise<{ pricing: PricingSettings }>;
+      })
+      .then((data) => {
+        if (active) setPricing(data.pricing);
+      })
+      .catch(() => {
+        if (active) setPricingError(true);
+      });
+
+    fetch("/api/catalog")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Catalog request failed.");
+        return response.json() as Promise<{ catalog: Omit<CatalogImage, "number">[] }>;
+      })
+      .then((data) => {
+        if (!active) return;
+        const fabricsData = data.catalog
+          .filter((image) => image.category === "fabric")
+          .map((image, index) => ({
+            ...image,
+            number: Number(/^fabric-(\d+)$/.exec(image.id)?.[1] ?? index + 1),
+          }));
+        const projectsData = data.catalog
+          .filter((image) => image.category === "project")
+          .map((image, index) => ({
+            ...image,
+            number: Number(/^project-(\d+)$/.exec(image.id)?.[1] ?? index + 1),
+          }));
+        setCatalogFabrics(fabricsData);
+        setCatalogProjects(projectsData);
+      })
+      .catch(() => {
+        if (active) setCatalogError(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (firstColorIndex >= catalogFabrics.length) setFirstColorIndex(0);
+    if (secondColorIndex >= catalogFabrics.length) {
+      setSecondColorIndex(catalogFabrics.length > 1 ? 1 : 0);
+    }
+  }, [catalogFabrics, firstColorIndex, secondColorIndex]);
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
@@ -418,9 +506,9 @@ export default function HomePage() {
       }, 0),
     [pieces],
   );
-  const rate = twoFace ? 90 : 80;
+  const rate = twoFace ? pricing.doubleFace : pricing.singleFace;
   const fabricCost = totalMeters * rate;
-  const delivery = totalMeters > 0 ? 50 : 0;
+  const delivery = totalMeters > 0 ? pricing.shippingCost : 0;
   const exactTotal = fabricCost + delivery;
   const roundedTotal =
     exactTotal > 0 ? Math.round(exactTotal / 5) * 5 : 0;
@@ -636,21 +724,24 @@ export default function HomePage() {
               accent={t.fabricsAccent}
               description={t.fabricsCopy}
             />
+            {catalogError && <p className="data-load-error" role="status">{t.catalogError}</p>}
             <div className="fabric-grid">
-              {fabrics.map((fabric, index) => (
+              {catalogFabrics.map((fabric) => {
+                const label = getFabricLabel(fabric);
+                return (
                 <div
                   className="fabric-card"
-                  key={fabric.number}
+                  key={fabric.id}
                 >
                   <div className="fabric-image-wrap">
                     <button
                       className="fabric-preview-trigger"
                       type="button"
-                      aria-label={`${t.fabricAlt} ${fabric.number}: ${t.fabricLabels[index]}`}
+                      aria-label={`${t.fabricAlt} ${fabric.number}: ${label}`}
                       onClick={() =>
                         setLightboxImage({
                           src: fabric.src,
-                          alt: `${t.fabricAlt} ${fabric.number}: ${t.fabricLabels[index]}`,
+                          alt: `${t.fabricAlt} ${fabric.number}: ${label}`,
                         })
                       }
                     >
@@ -660,6 +751,7 @@ export default function HomePage() {
                         width={700}
                         height={560}
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                        unoptimized
                       />
                       <span className="fabric-number">
                         {String(fabric.number).padStart(2, "0")}
@@ -670,11 +762,12 @@ export default function HomePage() {
                     </button>
                   </div>
                   <div className="fabric-caption">
-                    <span>{t.fabricLabels[index]}</span>
+                    <span>{label}</span>
                     <strong>{String(fabric.number).padStart(2, "0")}</strong>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
         </section>
@@ -688,16 +781,21 @@ export default function HomePage() {
               description={t.projectsCopy}
             />
             <div className="project-grid">
-              {projects.map((project) => (
-                <figure className="project-card" key={project.number}>
+              {catalogProjects.map((project) => {
+                const original = projects.find((item) => item.id === project.id);
+                const title = original?.title === project.title
+                  ? `${t.projectAlt} ${project.number}`
+                  : project.title;
+                return (
+                <figure className="project-card" key={project.id}>
                   <button
                     className="project-preview-trigger"
                     type="button"
-                    aria-label={`${t.projectAlt} ${project.number}`}
+                    aria-label={title}
                     onClick={() =>
                       setLightboxImage({
                         src: project.src,
-                        alt: `${t.projectAlt} ${project.number}`,
+                        alt: title,
                       })
                     }
                   >
@@ -707,16 +805,18 @@ export default function HomePage() {
                       width={1200}
                       height={800}
                       sizes="(max-width: 650px) 50vw, (max-width: 1024px) 50vw, 33vw"
+                      unoptimized
                     />
                   </button>
                   <figcaption>
-                    <span>{t.galleryCaption}</span>
+                    <span>{title}</span>
                     <span aria-hidden="true">
                       {String(project.number).padStart(2, "0")}
                     </span>
                   </figcaption>
                 </figure>
-              ))}
+              );
+              })}
             </div>
           </div>
         </section>
@@ -733,8 +833,9 @@ export default function HomePage() {
               <p>{t.calculatorCopy}</p>
               <div className="price-note">
                 <span aria-hidden="true">✳</span>
-                <p>{t.priceNote}</p>
+                <p>{priceNote}</p>
               </div>
+              {pricingError && <p className="data-load-error" role="status">{t.pricingError}</p>}
               <div className="calculator-stamp">
                 <span>{t.madeInFes}</span>
                 <strong>DÉCOR.MA</strong>
@@ -762,7 +863,7 @@ export default function HomePage() {
                     onClick={() => setTwoFace(false)}
                   >
                     {t.singleColor}
-                    <small>80 {t.perMeter}</small>
+                    <small>{formatMoney(pricing.singleFace, language)} {t.perMeter}</small>
                   </button>
                   <button
                     type="button"
@@ -771,7 +872,7 @@ export default function HomePage() {
                     onClick={() => setTwoFace(true)}
                   >
                     {t.doubleFace}
-                    <small>90 {t.perMeter}</small>
+                    <small>{formatMoney(pricing.doubleFace, language)} {t.perMeter}</small>
                   </button>
                 </div>
               </fieldset>
