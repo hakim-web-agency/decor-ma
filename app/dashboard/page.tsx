@@ -2,7 +2,7 @@
 
 import { upload } from "@vercel/blob/client";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiActivity,
   FiArrowRight,
@@ -75,6 +75,7 @@ type SalesPoint = {
 };
 
 type SalesRange = "12-months" | "30-days";
+type HeaderMenu = "notifications" | "profile" | null;
 
 const sectionNames: Record<Section, string> = {
   Overview: "لوحة المعلومات",
@@ -238,6 +239,8 @@ function OrdersTable({
 export default function DashboardPage() {
   const [section, setSection] = useState<Section>("Overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [headerMenu, setHeaderMenu] = useState<HeaderMenu>(null);
+  const headerActionsRef = useRef<HTMLDivElement>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [requests, setRequests] = useState<FabricRequest[]>([]);
   const [search, setSearch] = useState("");
@@ -298,6 +301,24 @@ export default function DashboardPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!headerMenu) return;
+    const closeMenu = (event: PointerEvent) => {
+      if (event.target instanceof Node && !headerActionsRef.current?.contains(event.target)) {
+        setHeaderMenu(null);
+      }
+    };
+    const closeMenuOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setHeaderMenu(null);
+    };
+    document.addEventListener("pointerdown", closeMenu);
+    document.addEventListener("keydown", closeMenuOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeMenu);
+      document.removeEventListener("keydown", closeMenuOnEscape);
+    };
+  }, [headerMenu]);
+
   const filteredOrders = useMemo(() => orders.filter((order) => {
     const matchesSearch = `${order.id} ${order.customer} ${order.item}`.toLowerCase().includes(search.toLowerCase());
     return matchesSearch && (filter === "All" || order.status === filter);
@@ -321,6 +342,7 @@ export default function DashboardPage() {
   const pagedOrders = filteredOrders.slice((page - 1) * pageSize, page * pageSize);
 
   const selectSection = (next: Section) => {
+    setHeaderMenu(null);
     setSection(next);
     setSidebarOpen(false);
     setSearch("");
@@ -357,6 +379,7 @@ export default function DashboardPage() {
   };
 
   const logout = async () => {
+    setHeaderMenu(null);
     setLogoutError("");
     try {
       const response = await fetch("/api/admin/logout", { method: "POST" });
@@ -398,6 +421,18 @@ export default function DashboardPage() {
     event.currentTarget.value = "";
     if (!file) return;
     setMediaError("");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setMediaError("صيغة الصورة غير مدعومة. يرجى اختيار JPG أو PNG أو WebP.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setMediaError("يجب ألا يتجاوز حجم الصورة 5 ميغابايت.");
+      return;
+    }
+    if (!image && !uploadTitle.trim()) {
+      setMediaError("يرجى إدخال اسم الصورة قبل رفعها.");
+      return;
+    }
     setMediaBusyId(image?.id ?? "new");
     try {
       const extension = file.type === "image/jpeg" ? "jpg" : file.type.slice("image/".length);
@@ -477,8 +512,10 @@ export default function DashboardPage() {
         </div>
 
         <div className="sidebar-profile">
-          <Avatar initials="AF" tone="sand" />
-          <span><strong>أمين فاضل</strong><small>مالك المتجر</small></span>
+          <button className="sidebar-profile-trigger" type="button" aria-label="فتح إعدادات الملف الشخصي" onClick={() => selectSection("Settings")}>
+            <Avatar initials="AF" tone="sand" />
+            <span><strong>أمين فاضل</strong><small>مالك المتجر</small></span>
+          </button>
           <button className="icon-button" type="button" aria-label="تسجيل الخروج" onClick={logout}><FiLogOut /></button>
         </div>
         {logoutError && <p className="logout-error" role="alert">{logoutError}</p>}
@@ -490,11 +527,53 @@ export default function DashboardPage() {
         <header className="topbar">
           <button className="icon-button mobile-menu" type="button" aria-label="فتح القائمة" onClick={() => setSidebarOpen(true)}><FiMenu /></button>
           <div className="breadcrumbs"><span>مساحة العمل</span><FiChevronRight /><strong>{sectionNames[section]}</strong></div>
-          <div className="topbar-actions">
+          <div className="topbar-actions" ref={headerActionsRef}>
             <a className="store-link" href="/" target="_blank" rel="noreferrer"><FiHome /><span>عرض المتجر</span><FiArrowUpRight /></a>
             <span className="topbar-divider" />
-            <button className="icon-button notification-button" type="button" aria-label="الإشعارات"><FiBell /><i /></button>
-            <Avatar initials="م" tone="sand" />
+            <button
+              className="icon-button notification-button"
+              type="button"
+              aria-label="الإشعارات"
+              aria-expanded={headerMenu === "notifications"}
+              aria-controls="dashboard-notifications"
+              onClick={() => setHeaderMenu((current) => current === "notifications" ? null : "notifications")}
+            ><FiBell /><i /></button>
+            <button
+              className="profile-trigger"
+              type="button"
+              aria-label="الملف الشخصي"
+              aria-haspopup="menu"
+              aria-expanded={headerMenu === "profile"}
+              aria-controls="dashboard-profile-menu"
+              onClick={() => setHeaderMenu((current) => current === "profile" ? null : "profile")}
+            ><Avatar initials="م" tone="sand" /></button>
+            {headerMenu === "notifications" && (
+              <section className="dashboard-dropdown notifications-dropdown" id="dashboard-notifications" aria-label="الإشعارات">
+                <div className="dropdown-heading"><strong>الإشعارات</strong><span>{pendingRequests ? `${pendingRequests} طلبات بانتظار المراجعة` : "آخر مستجدات المتجر"}</span></div>
+                {latestActivity.length ? (
+                  <div className="notification-list">
+                    {latestActivity.map((activity) => (
+                      <button
+                        className="notification-item"
+                        key={`${activity.action}-${activity.id}`}
+                        type="button"
+                        onClick={() => selectSection(activity.action === "order" ? "Orders" : "Fabric requests")}
+                      >
+                        <span className={`notification-dot${activity.action === "request" ? " notification-dot-request" : ""}`} />
+                        <span><strong>{activity.action === "order" ? "طلب جديد" : "طلب قماش"} · {activity.customer}</strong><small>{activity.detail}</small></span>
+                      </button>
+                    ))}
+                  </div>
+                ) : <p className="dropdown-empty">لا توجد إشعارات جديدة حالياً.</p>}
+              </section>
+            )}
+            {headerMenu === "profile" && (
+              <div className="dashboard-dropdown profile-dropdown" id="dashboard-profile-menu" role="menu" aria-label="قائمة الملف الشخصي">
+                <div className="profile-menu-heading"><Avatar initials="م" tone="sand" /><span><strong>أمين فاضل</strong><small>مالك المتجر</small></span></div>
+                <button className="profile-menu-item" type="button" role="menuitem" onClick={() => selectSection("Settings")}><FiSettings /> إعدادات المتجر</button>
+                <button className="profile-menu-item profile-menu-logout" type="button" role="menuitem" onClick={logout}><FiLogOut /> تسجيل الخروج</button>
+              </div>
+            )}
           </div>
         </header>
 

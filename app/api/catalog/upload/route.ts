@@ -120,8 +120,17 @@ export async function POST(request: Request) {
     }
   }
 
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!blobToken) {
+    return NextResponse.json(
+      { error: "رفع الصور غير مُعدّ حالياً. يرجى ضبط BLOB_READ_WRITE_TOKEN في بيئة التشغيل." },
+      { status: 503 },
+    );
+  }
+
   try {
     const result = await handleUpload({
+      token: blobToken,
       body,
       request,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
